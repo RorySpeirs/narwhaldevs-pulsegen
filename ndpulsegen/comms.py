@@ -5,11 +5,9 @@ import serial.tools.list_ports
 import warnings
 import struct
 
-import transcode
+from . import transcode
 
-
-class NarwhalPulseGen:
-
+class PulseGenerator:
     def __init__(self, port='COM4'):
         self.ser = serial.Serial()
         self.ser.baudrate = 12000000

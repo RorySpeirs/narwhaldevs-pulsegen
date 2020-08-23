@@ -1,9 +1,8 @@
 import numpy as np
 import struct
-# from . import transcode
-import transcode
 import time as systime
-import console_read
+from . import transcode
+from . import console_read
 
 def echo_terminal_characters(pulse_generator_object):
     print('Echoing terminal. Press \'Esc\' to stop.')
@@ -56,15 +55,8 @@ def cause_timeout_on_message_forward(pulse_generator_object):
     systime.sleep(1)
     pulse_generator_object.write_action(disable_after_current_run=True)
 
-def print_instruction(instruction):
-    print('\nInstruction (printed in FPGA order - rightmost byte first):')
-    for letter in instruction[::-1]:
-        print('{:08b}'.format(letter), end =" ")
-    print('')
-
 def print_bytes(bytemessage):
     print('Message:')
-    # for letter in instruction[:1:-1]:
     for letter in bytemessage[::-1]:
         print('{:08b}'.format(letter), end =" ")
     print('')
@@ -73,8 +65,8 @@ def print_bytes(bytemessage):
 
 
 #Make program run now...
-if __name__ == "__main__":
-    import comms
+# if __name__ == "__main__":
+    # import comms
 
     # usb_port ='COM6'
     # pg = comms.NarwhalPulseGen(usb_port)
@@ -85,7 +77,7 @@ if __name__ == "__main__":
     # cause_timeout_on_receive(pg)
     # cause_timeout_on_message_forward(pg)
 
-    instruction = transcode.encode_instruction(address=8191, state = np.zeros(24), duration=2**48-1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=True)
-    print_instruction(instruction)
+    # instruction = transcode.encode_instruction(address=8191, state = np.zeros(24), duration=2**48-1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=True)
+    # print_bytes(instruction)
 
 
