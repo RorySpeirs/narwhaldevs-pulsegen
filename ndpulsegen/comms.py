@@ -3,14 +3,14 @@ import time as systime
 import serial
 import serial.tools.list_ports
 import warnings
+import struct
 
-from . import transcode
+import transcode
 
 
 class NarwhalPulseGen:
 
     def __init__(self, port='COM4'):
-        self._define_constants()
         self.ser = serial.Serial()
         self.ser.baudrate = 12000000
         self.ser.port = port
@@ -55,7 +55,7 @@ class NarwhalPulseGen:
 
     def _confirm_communications(self):
         authantication_byte = np.random.bytes(1)
-        self.write_command_echo(authantication_byte)
+        self.write_echo(authantication_byte)
         all_echo_messages = self.read_all_messages_in_pipe(message_identifier=transcode.msgin_identifier['echo'], timeout=0.1)
         if all_echo_messages:
             success = False
@@ -70,10 +70,10 @@ class NarwhalPulseGen:
             warnings.warn('Communication unsuccessful! Device not responding!')    
 
     def _update_local_state_variables(self):
-        self.write_command_action_request(request_state=True)
+        self.write_action(request_state=True)
         state = self.return_on_message_type(message_identifier=transcode.msgin_identifier['devicestate'])
 
-        self.write_command_action_request(request_powerline_state=True)
+        self.write_action(request_powerline_state=True)
         powerline_state = self.return_on_message_type(message_identifier=transcode.msgin_identifier['powerlinestate'])
 
         self.final_ram_address = state['final_ram_address']
@@ -148,26 +148,43 @@ class NarwhalPulseGen:
                 return messages
             messages.setdefault(identifier, []).append(message)
 
-    def write_command_echo(self, byte_to_echo):
+    def write_echo(self, byte_to_echo):
+        command = transcode.encode_echo(byte_to_echo)
+        self.write_to_serial(command)
 
-    def write_command_device_options(self, final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None):
+    def write_device_options(self, final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None):
+        command = transcode.encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None)
+        self.write_to_serial(command)
 
-    def write_command_powerline_trigger_options(self, trigger_on_powerline=None, powerline_trigger_delay=None):
+    def write_powerline_trigger_options(self, trigger_on_powerline=None, powerline_trigger_delay=None):
+        command = transcode.encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigger_delay=None)
+        self.write_to_serial(command)
 
-    def write_command_action_request(self, enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
+    def write_action(self, enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
+        command = transcode.encode_action(enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False)
+        self.write_to_serial(command)
 
-    def write_command_general_debug(self, message):
+    def write_general_debug(self, message):
+        command = transcode.encode_general_debug(message)
+        self.write_to_serial(command)
 
-    def write_command_set_static_state(self, state):
+    def write_static_state(self, state):
+        command = transcode.encode_static_state(state)
+        self.write_to_serial(command)
 
-    def write_command_instructions(self, instructions):
-
+    def write_instructions(self, instructions):
+        ''' "instructions" are the encoded timing instructions that will be loaded into the pulse generator memeory.
+        These instructions must be generated using the transcode.encode_instruction function. 
+        This function accecpts encoded instructions in the following formats (where each individual instruction is always
+        in bytes/bytearray): A single encoded instruction, multiple encoded instructions joined together in a single bytes/bytearray, 
+        or a list, tuple, or array of single or multiple encoded instructions.'''
         if isinstance(instructions, (list, tuple, np.ndarray)):
-            self.ser.write(b''.join(instructions)) 
+            self.write_to_serial(b''.join(instructions)) 
         else:
-            self.ser.write(instructions) 
+            self.write_to_serial(instructions) 
 
-
+    def write_to_serial(self, command):
+        self.ser.write(command)
 '''
 Things to implement:
 Validation of parameters handed to functions which send data to the FPGA.

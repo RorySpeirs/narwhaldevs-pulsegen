@@ -1,70 +1,8 @@
 import numpy as np
 import struct
 
-msgin_decodeinfo = {
-    100:{'message_length':3, 'decode_function':decode_internal_error},
-    101:{'message_length':9, 'decode_function':decode_serialecho},
-    102:{'message_length':9, 'decode_function':decode_easyprint},
-    103:{'message_length':17, 'decode_function':decode_devicestate},
-    104:{'message_length':4, 'decode_function':decode_notification},
-    105:{'message_length':8, 'decode_function':decode_powerlinestate}
-    }
-
-msgin_identifier = {
-    'error':100,
-    'echo':101,
-    'print':102,
-    'devicestate':103,
-    'notification':104,
-    'powerlinestate':105
-    }
-
-decode_lookup = {
-    'clock_source':{1:'internal', 0:'external'},
-    'run_enable':{1:True, 0:False},
-    'noitfy_on_instruction':{1:True, 0:False},
-    'notify_on_main_trig':{1:True, 0:False},
-    'notify_on_run_finished':{1:True, 0:False},
-    'run_mode':{0:'single', 1:'continuous'},
-    'trigger_mode':{0:'software', 1:'hardware', 2:'either'},
-    'trig_on_powerline':{1:True, 0:False},
-    'powerline_locked':{1:True, 0:False},
-    'address_notify':{1:True, 0:False},
-    'trig_notify':{1:True, 0:False},
-    'finished_notify':{1:True, 0:False},
-    'invalid_identifier':{1:True, 0:False},
-    'msg_not_forwarded':{1:True, 0:False},
-    'msg_receive_timeout':{1:True, 0:False}
-    }
-
-msgout_identifier = {
-    'echo':150,
-    'load_ram':151,
-    'action_request':152,
-    'general_input':153,
-    'device_options':154,
-    'set_static_state':155,
-    'powerline_trigger_options':156
-    }
-
-encode_lookup = {
-    'run_enable':{True:0b11, False:0b01, None:0b00}, 
-    'trigger_now':{True:1, False:0},
-    'request_state':{True:1, False:0},
-    'request_powerline_state':{True:1, False:0},
-    'reset_output_coordinator':{True:1, False:0},
-    'disable_after_current_run':{True:1, False:0},
-    'notify_when_finished':{True:1, False:0},
-    'run_mode':{'single':0, 'continuous':1},
-    'trigger_mode':{'software':0, 'hardware':1, 'either':2},
-    'notify_on_trig':{True:1, False:0},
-    'trigger_on_powerline':{True:1, False:0},
-    'stop_and_wait':{True:1, False:0}, 
-    'notify_on_instruction':{True:1, False:0},  
-    'trig_out_on_instruction':{True:1, False:0},
-    'powerline_sync':{True:1, False:0}
-    }
-
+#########################################################
+# decode
 def decode_internal_error(message):
     ''' Messagein identifier:  1 byte: 100
     Message format:                     BITS USED   FPGA INDEX.
@@ -104,7 +42,7 @@ def decode_devicestate(message):
     trigger time:       7 bytes [5:12]  56 bits     [40+:56]    unsigned int.
     trigger length:     1 byte  [12]    8 bits      [96+:8]     unsigned int.
     tags:               1 byte  [13]    6 bits      [104+:6]    unsigned int.
-        loop mode                       1 bit       [104]   
+        run mode                        1 bit       [104]   
         trigger mode                    2 bit       [105+:2] 
         notify on main trig             1 bit       [107]   
         clock source                    1 bit       [108]   
@@ -175,6 +113,8 @@ def decode_serialecho(message):
     device_version = message[1:8].decode()
     return {'echoed_byte':echoed_byte, 'device_version':device_version}
 
+#########################################################
+# encode
 def encode_echo(byte_to_echo):
     ''' Messageout identifier:  1 byte: 150
     Message format:                             BITS USED   FPGA INDEX.
@@ -226,7 +166,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     tags =                      struct.pack('<Q', trigger_on_powerline_tag)[:1]
     return message_identifier + powerline_trigger_delay + tags
 
-def encode_action_request(enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
+def encode_action(enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
     ''' Messageout identifier:  1 byte: 152
     Message format:                             BITS USED   FPGA INDEX.
     tags:                       1 byte  [0]     8 bits      [0+:8]    
@@ -259,7 +199,7 @@ def encode_general_debug(message):
     message =               struct.pack('<Q', message)[:8]
     return message_identifier + message
 
-def encode_set_static_state(state):
+def encode_static_state(state):
     ''' Messageout identifier:  1 byte: 155
     Message format:                             BITS USED   FPGA INDEX.
     main_outputs_state:         3 bytes [0:3]   24 bits     [0+:24]     unsigned int.
@@ -269,16 +209,16 @@ def encode_set_static_state(state):
     state =                 struct.pack('<Q', state)[:3] 
     return message_identifier + state
 
-def encode_instruction(address=0, state=0, duration=1, loopto_address=0, loops=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False):
+def encode_instruction(address=0, state=0, duration=1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False):
     ''' Note. This function generates the instruction only. It is sent in a different instruction.
         Messageout identifier:  1 byte: 151
     Message format:                             BITS USED   FPGA INDEX.
     instruction_address:        2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
     main_outputs_state:         3 bytes [2:5]   24 bits     [16+:24]    unsigned int.
-    instruction_duration:       6 bytes [5:11]  48 bits     [40+:48]     unsigned int.
-    loopto_address:             2 bytes [11:13] 16 bits     [88+:16]     unsigned int.
-    number_of_loops:            4 bytes [13:17] 32 bits     [104+:32]     unsigned int.
-    tags:                       1 byte  [17]    3 bits      [136+:3]     unsigned int.
+    instruction_duration:       6 bytes [5:11]  48 bits     [40+:48]    unsigned int.
+    goto_address:               2 bytes [11:13] 16 bits     [88+:16]    unsigned int.
+    goto_counter:               4 bytes [13:17] 32 bits     [104+:32]   unsigned int.
+    tags:                       1 byte  [17]    3 bits      [136+:3]    unsigned int.
         stop_and_wait                           1 bit       [136]   
         hardware_trigger_out                    1 bits      [137] 
         notify_instruction_activated            1 bit       [138]
@@ -295,10 +235,10 @@ def encode_instruction(address=0, state=0, duration=1, loopto_address=0, loops=0
     address =               struct.pack('<Q', address)[:2]
     state =                 struct.pack('<Q', state)[:3]
     duration =              struct.pack('<Q', duration)[:6]
-    loopto_address =        struct.pack('<Q', loopto_address)[:2]
-    loops =                 struct.pack('<Q', loops)[:4]
+    goto_address =          struct.pack('<Q', goto_address)[:2]
+    goto_counter =          struct.pack('<Q', goto_counter)[:4]
     tags =                  struct.pack('<Q', tags)[:1]
-    return message_identifier + address + state + duration + loopto_address + loops + tags
+    return message_identifier + address + state + duration + goto_address + goto_counter + tags
 
 def state_multiformat_to_int(state):
     if isinstance(state, (list, tuple, np.ndarray)):
@@ -307,3 +247,69 @@ def state_multiformat_to_int(state):
             state_int += int(value) << bit_idx
         state = state_int
     return state
+
+#########################################################
+# constants
+msgin_decodeinfo = {
+    100:{'message_length':3, 'decode_function':decode_internal_error},
+    101:{'message_length':9, 'decode_function':decode_serialecho},
+    102:{'message_length':9, 'decode_function':decode_easyprint},
+    103:{'message_length':17, 'decode_function':decode_devicestate},
+    104:{'message_length':4, 'decode_function':decode_notification},
+    105:{'message_length':8, 'decode_function':decode_powerlinestate}
+    }
+
+msgin_identifier = {
+    'error':100,
+    'echo':101,
+    'print':102,
+    'devicestate':103,
+    'notification':104,
+    'powerlinestate':105
+    }
+
+decode_lookup = {
+    'clock_source':{1:'internal', 0:'external'},
+    'run_enable':{1:True, 0:False},
+    'noitfy_on_instruction':{1:True, 0:False},
+    'notify_on_main_trig':{1:True, 0:False},
+    'notify_on_run_finished':{1:True, 0:False},
+    'run_mode':{0:'single', 1:'continuous'},
+    'trigger_mode':{0:'software', 1:'hardware', 2:'either'},
+    'trig_on_powerline':{1:True, 0:False},
+    'powerline_locked':{1:True, 0:False},
+    'address_notify':{1:True, 0:False},
+    'trig_notify':{1:True, 0:False},
+    'finished_notify':{1:True, 0:False},
+    'invalid_identifier':{1:True, 0:False},
+    'msg_not_forwarded':{1:True, 0:False},
+    'msg_receive_timeout':{1:True, 0:False}
+    }
+
+msgout_identifier = {
+    'echo':150,
+    'load_ram':151,
+    'action_request':152,
+    'general_input':153,
+    'device_options':154,
+    'set_static_state':155,
+    'powerline_trigger_options':156
+    }
+
+encode_lookup = {
+    'run_enable':{True:0b11, False:0b01, None:0b00}, 
+    'trigger_now':{True:1, False:0},
+    'request_state':{True:1, False:0},
+    'request_powerline_state':{True:1, False:0},
+    'reset_output_coordinator':{True:1, False:0},
+    'disable_after_current_run':{True:1, False:0},
+    'notify_when_finished':{True:1, False:0},
+    'run_mode':{'single':0, 'continuous':1},
+    'trigger_mode':{'software':0, 'hardware':1, 'either':2},
+    'notify_on_trig':{True:1, False:0},
+    'trigger_on_powerline':{True:1, False:0},
+    'stop_and_wait':{True:1, False:0}, 
+    'notify_on_instruction':{True:1, False:0},  
+    'trig_out_on_instruction':{True:1, False:0},
+    'powerline_sync':{True:1, False:0}
+    }

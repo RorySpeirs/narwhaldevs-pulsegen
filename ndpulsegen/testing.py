@@ -1,83 +1,91 @@
 import numpy as np
+import struct
+# from . import transcode
+import transcode
 import time as systime
-import msvcrt
-from pulsegen_comms import NarwhalPulseGen
+import console_read
 
+def echo_terminal_characters(pulse_generator_object):
+    print('Echoing terminal. Press \'Esc\' to stop.')
+    kb = console_read.KBHit()
+    while True:
+        if kb.kbhit():
+            input_character = kb.getch()
+            if input_character == chr(27).encode():
+                break
+            pulse_generator_object.write_echo(input_character)
+        all_echo_messages = pulse_generator_object.read_all_messages_in_pipe(message_identifier=transcode.msgin_identifier['echo'])
+        if all_echo_messages:
+            for message in all_echo_messages: 
+                print(message['echoed_byte'].decode(errors='replace'))
+        systime.sleep(0.01)
+    kb.set_normal_term()
 
-    def echo_terminal_characters(self):
-        print('Echoing terminal. Press \'Esc\' to stop.')
-        while True:
-            if msvcrt.kbhit():
-                input_character = msvcrt.getch()
-                if input_character == chr(27).encode():
-                    break
-                self.write_command_echo(input_character)
-            all_echo_messages = self.read_all_messages_in_pipe(message_identifier=self.msgin_identifier['echo'])
-            if all_echo_messages:
-                for message in all_echo_messages: 
-                    print(message['echoed_byte'].decode(errors='replace'))
-            systime.sleep(0.01)
+def cause_invalid_receive(pulse_generator_object):
+    '''This function deliberatly sends a message with an invalid message identifier
+    to test that the FPGA is dealing with the error correctly'''
+    message_identifier = struct.pack('B', 15)
+    pulse_generator_object.write_to_serial(message_identifier)
+    msg = pulse_generator_object.return_on_message_type(transcode.msgin_identifier['error'])
+    print(msg)
 
-    def cause_invalid_receive(self):
-        '''This function deliberatly sends a message with an invalid message identifier
-        to test that the FPGA is dealing with the error correctly'''
-        message_identifier = struct.pack('B', 15)
-        self.ser.write(message_identifier)
-        msg = self.return_on_message_type(self.msgin_identifier['error'])
-        print(msg)
+def cause_timeout_on_receive(pulse_generator_object):
+    '''This function deliberatly sends a message that is incomplete'''
+    message_identifier = struct.pack('B', 153)
+    pulse_generator_object.write_to_serial(message_identifier)
+    pulse_generator_object.write_to_serial(struct.pack('B', 1))
+    pulse_generator_object.write_to_serial(struct.pack('B', 2))
+    msg = pulse_generator_object.return_on_message_type(transcode.msgin_identifier['error'])
+    print(msg)
 
-    def cause_timeout_on_receive(self):
-        '''This function deliberatly sends a message that is incomplete'''
-        message_identifier = struct.pack('B', 153)
-        self.ser.write(message_identifier)
-        self.ser.write(struct.pack('B', 1))
-        self.ser.write(struct.pack('B', 2))
-        msg = self.return_on_message_type(self.msgin_identifier['error'])
-        print(msg)
+def cause_timeout_on_message_forward(pulse_generator_object):
+    '''This demonstrates a limitation of the instruction loading process on the FPGA. If a run is actually running,
+    and that run contains ONLY instructions that last a SINGLE cycle, then there is never a 'gap' in the updating of
+    old instructions to load a new instruction in there. This is unlikely to happen in practise, but it came up once.'''
+    #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
+    instr0 = transcode.encode_instruction(0,0b11111111,1,0,0, False, False, False)
+    instr1 = transcode.encode_instruction(1,0b10101010,1,0,0, False, False, False)
+    instructions = [instr0, instr1]
+    pulse_generator_object.write_instructions(instructions)
+    pulse_generator_object.write_device_options(final_ram_address=1, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pulse_generator_object.write_action(trigger_now=True)
 
-    def cause_timeout_on_message_forward(self):
-        '''This demonstrates a limitation of the instruction loading process on the FPGA. If a run is actually running,
-        and that run contains ONLY instructions that last a SINGLE cycle, then there is never a 'gap' in the updating of
-        old instructions to load a new instruction in there. This is unlikely to happen in practise, but it came up once.'''
-        #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-        instr0 = self.generate_instruction(0,0b11111111,1,0,0, False, False, False)
-        instr1 = self.generate_instruction(1,0b10101010,1,0,0, False, False, False)
-        instructions = [instr0, instr1]
-        self.write_instructions_to_board(instructions)
-        self.write_command_device_options(final_ram_address=1, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-        self.write_command_action_request(trigger_now=True)
+    pulse_generator_object.write_instructions(instructions)
+    msg = pulse_generator_object.return_on_message_type(transcode.msgin_identifier['error'])
+    print(msg)
+    systime.sleep(1)
+    pulse_generator_object.write_action(disable_after_current_run=True)
 
-        self.write_instructions_to_board(instructions)
-        msg = self.return_on_message_type(self.msgin_identifier['error'])
-        print(msg)
-        systime.sleep(1)
-        self.write_command_action_request(disable_after_current_run=True)
+def print_instruction(instruction):
+    print('\nInstruction (printed in FPGA order - rightmost byte first):')
+    for letter in instruction[::-1]:
+        print('{:08b}'.format(letter), end =" ")
+    print('')
 
-    def print_instruction(self, instruction):
-        print('Address:', end =" ")
-        for letter in instruction[1::-1]:
-            print('{:08b}'.format(letter), end =" ")
-        print('\nInstruction:')
-        # for letter in instruction[:1:-1]:
-        for letter in instruction[9:1:-1]:
-            print('{:08b}'.format(letter), end =" ")
-        print('')
-
-    def print_bytes(self, bytemessage):
-        print('Message:')
-        # for letter in instruction[:1:-1]:
-        for letter in bytemessage[::-1]:
-            print('{:08b}'.format(letter), end =" ")
-        print('')
+def print_bytes(bytemessage):
+    print('Message:')
+    # for letter in instruction[:1:-1]:
+    for letter in bytemessage[::-1]:
+        print('{:08b}'.format(letter), end =" ")
+    print('')
 
 
 
 
 #Make program run now...
 if __name__ == "__main__":
-    usb_port ='COM6'
-    pg = NarwhalPulseGen(usb_port)
-    pg.connect()
+    import comms
 
+    # usb_port ='COM6'
+    # pg = comms.NarwhalPulseGen(usb_port)
+    # pg.connect()
+
+    # echo_terminal_characters(pg)
+    # cause_invalid_receive(pg)
+    # cause_timeout_on_receive(pg)
+    # cause_timeout_on_message_forward(pg)
+
+    instruction = transcode.encode_instruction(address=8191, state = np.zeros(24), duration=2**48-1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=True)
+    print_instruction(instruction)
 
 
