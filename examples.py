@@ -117,9 +117,9 @@ def run_enable_hardware(pg):
     kb = ndpulsegen.console_read.KBHit()
     while True:
         if kb.kbhit():
-            input_character = kb.getch()
-            if input_character == chr(27).encode():
+            if kb.getch() == chr(27).encode():
                 break   
+    kb.set_normal_term()
     pg.write_action(disable_after_current_run=True)
     print('Looping stopped.')
 
@@ -137,13 +137,13 @@ def get_state(pg):
 
 def set_static_state(pg):
     # outputs are set by 24 bits of an integer. Rightmost bit is output 0.
-    pg.write_command_set_static_state(0b11111111)
+    pg.write_static_state(0b11111111)
     systime.sleep(1)
-    pg.write_command_set_static_state([0, 0, 1])
+    pg.write_static_state([0, 0, 1])
     systime.sleep(1)
-    pg.write_command_set_static_state(0b101)
+    pg.write_static_state(0b101)
     systime.sleep(1)
-    pg.write_command_set_static_state(np.zeros(24))
+    pg.write_static_state(np.zeros(24))
 
 def notify_when_finished(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
@@ -286,7 +286,7 @@ def powerline_test_global_setting(pg):
 
     pg.write_device_options(final_ram_address=4, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=255)
 
-    pg.write_command_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=0)
+    pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=0)
     pg.write_action(trigger_now=True)
 
     systime.sleep(2)
@@ -295,10 +295,10 @@ def powerline_test_global_setting(pg):
     powerline_state = pg.return_on_message_type(message_identifier=pg.msgin_identifier['powerlinestate'], timeout=1)
     desired_trigger_phase = 90 #desired phase in degrees
     trigger_delay = desired_trigger_phase/360*powerline_state['powerline_period']
-    pg.write_command_powerline_trigger_options(powerline_trigger_delay=int(trigger_delay))
+    pg.write_powerline_trigger_options(powerline_trigger_delay=int(trigger_delay))
     pg.write_action(trigger_now=True)
 
-    pg.write_command_powerline_trigger_options(trigger_on_powerline=False) #Remember, this is a device setting, so it persists until you change it
+    pg.write_powerline_trigger_options(trigger_on_powerline=False) #Remember, this is a device setting, so it persists until you change it
 
 
 def powerline_test_instruction_tag_single_run(pg):
@@ -311,7 +311,7 @@ def powerline_test_instruction_tag_single_run(pg):
     pg.write_instructions(instructions)
 
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=255)
-    pg.write_command_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
+    pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
 
     pg.write_action(trigger_now=True)
 
@@ -326,7 +326,7 @@ def powerline_test_instruction_tag_continuous_run(pg):
     pg.write_instructions(instructions)
 
     pg.write_device_options(final_ram_address=4, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=255)
-    pg.write_command_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
+    pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
 
     pg.write_action(trigger_now=True)
     systime.sleep(5)
@@ -436,13 +436,15 @@ def pcb_connection_check(pg):
     pg.write_device_options(final_ram_address=24, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
     print('Press Esc. key to stop looping.')
+    kb = ndpulsegen.console_read.KBHit()
     while True:
-        if msvcrt.kbhit():
-            if msvcrt.getch() == chr(27).encode():
-                print('Stop Looping command sent. Waiting for stopped confirmation.')
-                break
-        systime.sleep(0.1)      
+        if kb.kbhit():
+            if kb.getch() == chr(27).encode():
+                break   
+        systime.sleep(0.1) 
+    kb.set_normal_term()
     pg.write_action(disable_after_current_run=True)
+    print('Looping stopped.')
 
 def debug_test(pg):
 
@@ -481,7 +483,7 @@ def testing(pg):
     # systime.sleep(3)
     # pg.write_action(disable_after_current_run=True)
     # pg.write_action(reset_output_coordinator=True)
-    # pg.write_command_set_static_state(np.ones(24))
+    # pg.write_static_state(np.ones(24))
 
 #Make program run now...
 if __name__ == "__main__":
