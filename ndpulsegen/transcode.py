@@ -134,12 +134,17 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=No
         trigger_mode                            2 bits      [81+:2] 
         trigger_notification_enable             1 bit       [83] 
     '''
+
+    #The following lines are all nonsense!!!!!
+    # What I have to do is re-write the options instructions in the FPGA so that I don't have to keep local records of the variables. So that I
+    # will only change any setting if I actually want to change it!!!!
     if final_ram_address    is not None: final_ram_address = final_ram_address
     if run_mode             is not None: run_mode = run_mode
     if trigger_mode         is not None: trigger_mode = trigger_mode
     if trigger_time         is not None: trigger_time = trigger_time
     if notify_on_main_trig  is not None: notify_on_main_trig = notify_on_main_trig
     if trigger_length       is not None: trigger_length = trigger_length
+
     run_mode_tag =              encode_lookup['run_mode'][run_mode] << 0
     trigger_mode_tag =          encode_lookup['trigger_mode'][trigger_mode] << 1
     notify_on_main_trig_tag =   encode_lookup['notify_on_trig'][notify_on_main_trig] << 3
@@ -158,8 +163,12 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     tags:                       1 byte  [3]     1 bits      [24]     unsigned int.
         wait_for_powerline                      1 bit       [24]   
     '''
+    #The following lines are all nonsense!!!!!
+    # What I have to do is re-write the options instructions in the FPGA so that I don't have to keep local records of the variables. So that I
+    # will only change any setting if I actually want to change it!!!!
     if powerline_trigger_delay  is not None: powerline_trigger_delay = powerline_trigger_delay
     if trigger_on_powerline     is not None: trigger_on_powerline = trigger_on_powerline
+
     trigger_on_powerline_tag =  encode_lookup['trigger_on_powerline'][trigger_on_powerline]
     message_identifier =        struct.pack('B', msgout_identifier['powerline_trigger_options'])
     powerline_trigger_delay =   struct.pack('<Q', powerline_trigger_delay)[:3]

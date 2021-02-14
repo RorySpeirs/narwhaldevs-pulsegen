@@ -128,11 +128,11 @@ def get_state(pg):
     # I should package this up into a single convenient function
 
     pg.write_action(request_state=True)
-    state = pg.return_on_message_type(message_identifier=pg.msgin_identifier['devicestate'], timeout=1)
+    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
     print(state)
 
     pg.write_action(request_powerline_state=True)
-    powerline_state = pg.return_on_message_type(message_identifier=pg.msgin_identifier['powerlinestate'], timeout=1)
+    powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
     print(powerline_state)
 
 def set_static_state(pg):
@@ -292,7 +292,7 @@ def powerline_test_global_setting(pg):
     systime.sleep(2)
     '''You can also choose at what point in the AC line cycle you want the device to restart'''
     pg.write_action(request_powerline_state=True)
-    powerline_state = pg.return_on_message_type(message_identifier=pg.msgin_identifier['powerlinestate'], timeout=1)
+    powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
     desired_trigger_phase = 90 #desired phase in degrees
     trigger_delay = desired_trigger_phase/360*powerline_state['powerline_period']
     pg.write_powerline_trigger_options(powerline_trigger_delay=int(trigger_delay))
@@ -413,7 +413,7 @@ def test_notifications(pg):
     pg.write_action(trigger_now=True, notify_when_current_run_finished=True)
     # messages = pg.receive_messages2(timeout=1.5)
     messages = pg.read_all_messages_in_pipe(timeout=1.5)
-    for message in messages[pg.msgin_identifier['notification']]:
+    for message in messages[ndpulsegen.transcode.msgin_identifier['notification']]:
         print(message)
 
 
@@ -465,7 +465,7 @@ def debug_test(pg):
 
 
     pg.write_action(request_state=True)
-    state = pg.return_on_message_type(message_identifier=pg.msgin_identifier['devicestate'], timeout=1, print_all_messages=True)
+    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1, print_all_messages=True)
 
 def testing(pg):
     # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
@@ -489,14 +489,9 @@ def testing(pg):
 if __name__ == "__main__":
     usb_port ='COM6'
     pg = ndpulsegen.PulseGenerator(usb_port)
-
-
     pg.connect()
 
-    testing(pg)
-
-    #Note on picoscope setup
-    # ChA: trig out, ChB: main0 (50 ohm terminator), ChC: main1 (no terminator), ChD: a wire wrapped around a power line (shows 50Hz singal at +-10mV)
+    # testing(pg)
 
     '''If there is a bug, this will probably reset things and the device should work again.
     Try to remember all the details about how the bug arose, and replicate it straight away if you can.'''
@@ -518,6 +513,13 @@ if __name__ == "__main__":
     # stop_and_wait_on_specific_instructions(pg)
     # using_loops_normally(pg)
     # using_loops_advanced(pg)
+
+    '''
+    Changing the powerline settings arent working at the moment because I did that dumb thing when I made the transcode module.
+    I need to change the format of the powerline settings and general settings, so that I dont need to store them locally
+
+    and they are also just not working as expected, but I don't want to look into this until I have fixed the actual problem
+    '''
     # powerline_test_global_setting(pg)  
     # powerline_test_instruction_tag_single_run(pg)
     # powerline_test_instruction_tag_continuous_run(pg)
@@ -527,7 +529,7 @@ if __name__ == "__main__":
     # fully_load_ram_test(pg)                  
     # put_into_and_recover_from_erroneous_state(pg)  
     # test_notifications(pg)
-    # pg.echo_terminal_characters()
+    pg.echo_terminal_characters()
     # pg.cause_invalid_receive()
     # pg.cause_timeout_on_receive()
     # pg.cause_timeout_on_message_forward()

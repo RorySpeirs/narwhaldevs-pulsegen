@@ -150,16 +150,16 @@ class PulseGenerator:
         command = transcode.encode_echo(byte_to_echo)
         self.write_to_serial(command)
 
-    def write_device_options(self, final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None):
-        command = transcode.encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None)
+    def write_device_options(self, *args, **kwargs):
+        command = transcode.encode_device_options(*args, **kwargs)
         self.write_to_serial(command)
 
-    def write_powerline_trigger_options(self, trigger_on_powerline=None, powerline_trigger_delay=None):
-        command = transcode.encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigger_delay=None)
+    def write_powerline_trigger_options(self, *args, **kwargs):
+        command = transcode.encode_powerline_trigger_options(*args, **kwargs)
         self.write_to_serial(command)
 
-    def write_action(self, enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
-        command = transcode.encode_action(enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False)
+    def write_action(self, *args, **kwargs):
+        command = transcode.encode_action(*args, **kwargs)
         self.write_to_serial(command)
 
     def write_general_debug(self, message):

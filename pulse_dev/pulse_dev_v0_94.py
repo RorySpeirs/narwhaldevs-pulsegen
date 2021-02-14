@@ -396,6 +396,7 @@ class NarwhalPulseGen:
         tags = enable_tag | trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | notify_when_current_run_finished | request_powerline_state_tag
         message_identifier =    struct.pack('B', self.msgout_identifier['action_request'])
         tags =                  struct.pack('<Q', tags)[:1]
+        print(message_identifier + tags)
         self.ser.write(message_identifier + tags)
 
     def write_command_general_debug(self, message):

@@ -14,10 +14,10 @@ def echo_terminal_characters(pulse_generator_object):
     while True:
         if kb.kbhit():
             input_character = kb.getch()
-            if input_character == chr(27).encode():
+            if input_character.encode() == chr(27).encode():
                 break
-            pulse_generator_object.write_echo(input_character)
-        all_echo_messages = pulse_generator_object.read_all_messages_in_pipe(message_identifier=transcode.msgin_identifier['echo'])
+            pulse_generator_object.write_echo(input_character.encode())
+        all_echo_messages = pulse_generator_object.read_all_messages_in_pipe(message_identifier=ndpulsegen.transcode.msgin_identifier['echo'])
         if all_echo_messages:
             for message in all_echo_messages: 
                 print(message['echoed_byte'].decode(errors='replace'))
@@ -72,6 +72,7 @@ if __name__ == "__main__":
     # usb_port ='tty.usbserial-FT3KRFFN0'
     pg = ndpulsegen.PulseGenerator(usb_port)
     pg.connect()
+
 
     echo_terminal_characters(pg)
     cause_invalid_receive(pg)
