@@ -468,22 +468,40 @@ def debug_test(pg):
     state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1, print_all_messages=True)
 
 def testing(pg):
-    # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    instr0 = ndpulsegen.transcode.encode_instruction(0,np.ones(24),1,0,0, False, False, False)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,np.zeros(24),7,0,0, False, False, False)
-    instr2 = ndpulsegen.transcode.encode_instruction(2,0b00001111,2,0,0, False, False, False)
-    instr3 = ndpulsegen.transcode.encode_instruction(3,0b00011000,3,0,0, False, False, False)
-    instructions = [instr0, instr1, instr2, instr3]
-    pg.write_instructions(instructions)
 
-    # pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='either', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-    pg.write_device_options(final_ram_address=1, run_mode='continuous', trigger_mode='either', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-    pg.write_action(trigger_now=True)
+    pg.write_device_options(final_ram_address=7123, run_mode='single', trigger_mode='either', trigger_time=12345678, notify_on_main_trig=True, trigger_length=255)
+    pg.write_action(request_state=True)
+    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
+    print(state)
+    
+    pg.write_device_options(trigger_length=123)
+    pg.write_action(request_state=True)
+    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
+    print(state)
 
-    # systime.sleep(3)
-    # pg.write_action(disable_after_current_run=True)
-    # pg.write_action(reset_output_coordinator=True)
-    # pg.write_static_state(np.ones(24))
+    # pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
+    # pg.write_action(request_powerline_state=True)
+    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
+    # print(powerline_state)
+
+    # pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=1999999)
+    # pg.write_action(request_powerline_state=True)
+    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
+    # print(powerline_state)
+
+    # pg.write_powerline_trigger_options(trigger_on_powerline=False)
+    # pg.write_action(request_powerline_state=True)
+    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
+    # print(powerline_state)
+
+    # pg.write_powerline_trigger_options(powerline_trigger_delay=65)
+    # pg.write_action(request_powerline_state=True)
+    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
+    # print(powerline_state)
+
+    '''I need to look at the run_enable response. There is a software run_enable setting, that is actually part of the "actions" command. But it is saved internally I think
+    so I probably need to return it as a setting. At the moment, when I return the device options, I return "run_enable", which is actually just whether or not the clock is
+    currently running '''
 
 #Make program run now...
 if __name__ == "__main__":
@@ -491,7 +509,7 @@ if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator(usb_port)
     pg.connect()
 
-    # testing(pg)
+    testing(pg)
 
     '''If there is a bug, this will probably reset things and the device should work again.
     Try to remember all the details about how the bug arose, and replicate it straight away if you can.'''
@@ -529,7 +547,7 @@ if __name__ == "__main__":
     # fully_load_ram_test(pg)                  
     # put_into_and_recover_from_erroneous_state(pg)  
     # test_notifications(pg)
-    pg.echo_terminal_characters()
+    # pg.echo_terminal_characters()
     # pg.cause_invalid_receive()
     # pg.cause_timeout_on_receive()
     # pg.cause_timeout_on_message_forward()
