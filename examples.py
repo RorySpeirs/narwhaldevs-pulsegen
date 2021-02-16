@@ -470,14 +470,15 @@ def debug_test(pg):
 def testing(pg):
 
     pg.write_device_options(final_ram_address=7123, run_mode='single', trigger_mode='either', trigger_time=12345678, notify_on_main_trig=True, trigger_length=255)
+    pg.write_action(enable=False)
     pg.write_action(request_state=True)
     state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
     print(state)
     
-    pg.write_device_options(trigger_length=123)
-    pg.write_action(request_state=True)
-    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
-    print(state)
+    # pg.write_device_options(trigger_length=123)
+    # pg.write_action(request_state=True)
+    # state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
+    # print(state)
 
     # pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
     # pg.write_action(request_powerline_state=True)
