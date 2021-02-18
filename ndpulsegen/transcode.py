@@ -33,7 +33,6 @@ def decode_easyprint(message):
         binary_representation.append('{:08b} '.format(letter))
     return ''.join(binary_representation)
 
-#     Message format:                     BITS USED   FPGA INDEX.
 def decode_devicestate(message):
     ''' Messagein identifier:  1 byte: 103
     Message format:                     BITS USED   FPGA INDEX.
