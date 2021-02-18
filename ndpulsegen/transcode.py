@@ -22,7 +22,6 @@ def decode_internal_error(message):
     invalid_identifier_received =       decode_lookup['invalid_identifier'][invalid_identifier_received_tag]
     timeout_waiting_for_msg =           decode_lookup['msg_receive_timeout'][timeout_waiting_for_msg_tag]
     received_message_not_forwarded =    decode_lookup['msg_not_forwarded'][received_message_not_forwarded_tag]
-            #warnings.warn('The FPGA received a message with an invalid message identifier.')
     return {'invalid_identifier_received':invalid_identifier_received, 'timeout_waiting_to_receive_message':timeout_waiting_for_msg, 'received_message_not_forwarded':received_message_not_forwarded, 'error_info':error_info}
 
 def decode_easyprint(message):
@@ -34,39 +33,7 @@ def decode_easyprint(message):
         binary_representation.append('{:08b} '.format(letter))
     return ''.join(binary_representation)
 
-# def decode_devicestate(message):
-#     ''' Messagein identifier:  1 byte: 103
 #     Message format:                     BITS USED   FPGA INDEX.
-#     output state:       3 bytes [0:3]   24 bits     [0+:24]     unsigned int. LSB=output 0
-#     final ram address:  2 bytes [3:5]   16 bits     [24+:16]    unsigned int.
-#     trigger time:       7 bytes [5:12]  56 bits     [40+:56]    unsigned int.
-#     trigger length:     1 byte  [12]    8 bits      [96+:8]     unsigned int.
-#     tags:               1 byte  [13]    6 bits      [104+:6]    unsigned int.
-#         run mode                        1 bit       [104]   
-#         trigger mode                    2 bit       [105+:2] 
-#         notify on main trig             1 bit       [107]   
-#         clock source                    1 bit       [108]   
-#         run enable                      1 bit       [109] 
-#     current ram address:2 bytes [14:16] 16 bits     [112+:16]   unsigned int.
-#     '''
-#     state =                 np.unpackbits(np.array([message[0], message[1], message[2]], dtype=np.uint8), bitorder='little')
-#     final_ram_address, =    struct.unpack('<Q', message[3:5] + bytes(6))
-#     trigger_time, =         struct.unpack('<Q', message[5:12] + bytes(1))
-#     trigger_length, =       struct.unpack('<Q', message[12:13] + bytes(7))
-#     tags, =                 struct.unpack('<Q', message[13:14] + bytes(7))
-#     current_ram_address, =  struct.unpack('<Q', message[14:16] + bytes(6))
-#     run_mode_tag =              (tags >> 0) & 0b1            
-#     trigger_mode_tag =          (tags >> 1) & 0b11              
-#     notify_on_main_trig_tag =   (tags >> 3) & 0b1    
-#     clock_source_tag =          (tags >> 4) & 0b1  
-#     run_enable_tag =            (tags >> 5) & 0b1  
-#     run_mode =              decode_lookup['run_mode'][run_mode_tag]
-#     trigger_mode =          decode_lookup['trigger_mode'][trigger_mode_tag]
-#     notify_on_main_trig =   decode_lookup['notify_on_main_trig'][notify_on_main_trig_tag]
-#     clock_source =          decode_lookup['clock_source'][clock_source_tag]
-#     run_enable =            decode_lookup['run_enable'][run_enable_tag]
-#     return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'trigger_length':trigger_length, 'clock_source':clock_source, 'run_enable':run_enable, 'current_address':current_ram_address}
-
 def decode_devicestate(message):
     ''' Messagein identifier:  1 byte: 103
     Message format:                     BITS USED   FPGA INDEX.
@@ -105,7 +72,6 @@ def decode_devicestate(message):
     software_run_enable =   decode_lookup['software_run_enable'][software_run_enable_tag]
     hardware_run_enable =   decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
     return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
-
 
 def decode_powerlinestate(message):
     ''' Messagein identifier:  1 byte: 105
@@ -213,7 +179,6 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
         update_powln_trig_dly_tag               1 bit       [24]
         wait_for_powerline                      2 bit       [25+:2]     [25]: powerline_wait_setting, [26]:update flag
     '''
-
     if powerline_trigger_delay is None:
         update_powerline_trigger_delay_tag = 0
         powerline_trigger_delay = 0
