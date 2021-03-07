@@ -472,8 +472,9 @@ def testing(pg):
     pg.write_device_options(final_ram_address=7123, run_mode='single', trigger_mode='either', trigger_time=12345678, notify_on_main_trig=True, trigger_length=255)
     pg.write_action(enable=False)
     pg.write_action(request_state=True)
-    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
-    print(state)
+    # state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
+    pg.read_all_messages()
+    # print(state)
     
     # pg.write_device_options(trigger_length=123)
     # pg.write_action(request_state=True)
@@ -504,13 +505,32 @@ def testing(pg):
     so I probably need to return it as a setting. At the moment, when I return the device options, I return "run_enable", which is actually just whether or not the clock is
     currently running '''
 
+def test():
+    # import queue
+    # a = ['a', 'b', 'c']
+
+    # d = {key:queue.Queue() for key in a}
+    # for element in d.values():
+    #     print(element)
+
+    # class a: pass
+    # a.c = 1
+    # print(a.c)
+    # a = object()
+    # a.c = 1
+    # print(a.c)
+
+    def t2(a=0):
+        print(a)
+    a = 1
+
 #Make program run now...
 if __name__ == "__main__":
-    usb_port ='COM6'
-    pg = ndpulsegen.PulseGenerator(usb_port)
-    pg.connect()
+    pg = ndpulsegen.PulseGenerator()
+    pg.connect_serial()
 
     testing(pg)
+    # test()
 
     '''If there is a bug, this will probably reset things and the device should work again.
     Try to remember all the details about how the bug arose, and replicate it straight away if you can.'''

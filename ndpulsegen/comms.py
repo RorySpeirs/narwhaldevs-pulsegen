@@ -9,38 +9,30 @@ import queue
 import threading
 from . import transcode
 
-
 class PulseGenerator():
-    def __init__(self):
+    def __init__(self, port=None):
 
         #setup serial port
         self.ser = serial.Serial()
         self.ser.timeout = 0.1          #block for 100ms second
         self.ser.writeTimeout = 1     #timeout for write
         self.ser.baudrate = 12000000
-        self.ser.port = 'COM6'
 
-        self.echo_queue = queue.Queue()
-        self.notification_queue = queue.Queue()
-        self.devicestate_queue = queue.Queue()
-        self.powerlinestate_queue = queue.Queue()
-        self.internal_error_queue = queue.Queue()
-        self.easyprint_queue = queue.Queue()
-        self.bytes_dropped_queue = queue.Queue()
-        #Could add all these queues in a dictionary and use the keys from transcode.msgin_identifier
+        # For every message type that can recieved by the monitor thread, make a queue that the main thread will interact with
+        self.msgin_queues = {decodeinfo['message_type']:queue.Queue() for decodeinfo in transcode.msgin_decodeinfo.values()}
+        self.msgin_queues['bytes_dropped'] = queue.Queue()
 
         self.close_readthread_event = threading.Event()
         self.read_thread_killed_itself = False
 
-        self.connected = False
-        self.connection_trys = 0
         self.valid_ports = []
-        
-        self.connect_serial()
+        if port:
+            class mock_comport: pass
+            mock_comport.device = port
+            self.valid_ports.append(mock_comport)
 
-    def connect_serial(self):
-        self.connection_trys += 1
-        if self.connection_trys >= 5:
+    def connect_serial(self, connection_attempts=0):
+        if connection_attempts >= 6:
             print('Could not connect device')
             return
         if self.valid_ports:
@@ -52,16 +44,15 @@ class PulseGenerator():
             except Exception as ex:
                 #if port throws an error on open, wait a bit, then try a new one
                 time.sleep(0.1)
-                self.connect_serial()
+                self.connect_serial(connection_attempts=connection_attempts+1)
                 return
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
-            # self.serial_thread.start()
-            self.serial_read_thread = threading.Thread(target=self.monitor_serial)
+            self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
             self.serial_read_thread.start()
             self.tested_authantication_byte = np.random.bytes(1)
             self.write_command(transcode.encode_echo(self.tested_authantication_byte))
-            self.check_authantication_byte()
+            self.check_authantication_byte(connection_attempts)
         else:
             # if there are no ports left in the list, add any valid ports to the list  
             comports = list(serial.tools.list_ports.comports())
@@ -70,144 +61,71 @@ class PulseGenerator():
                     if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
                         self.valid_ports.append(comport)
             if self.valid_ports:
-                self.connect_serial()
+                self.connect_serial(connection_attempts=connection_attempts+1)
             else:
                 print('Hardware not found, searching for hardware...')
                 time.sleep(1)
-                self.connect_serial()
+                self.connect_serial(connection_attempts=connection_attempts+1)
 
-    def check_authantication_byte(self):
+    def check_authantication_byte(self, connection_attempts):
         echoed_bytes = []
-        while not self.echo_queue.empty:
-            echoed_bytes.append(self.echo_queue.get(block=False)['echoed_byte'])
+        echo_queue = self.msgin_queues['echo']
+        while not echo_queue.empty:
+            echoed_bytes.append(echo_queue.get(block=False)['echoed_byte'])
         try:
-            message = self.echo_queue.get(timeout=1)
+            message = echo_queue.get(timeout=1)
             echoed_bytes.append(message['echoed_byte'])
         except queue.Empty as ex:
             pass
         if self.tested_authantication_byte in echoed_bytes:
-            # print('authentication success')
-            self.set_holdoff(10E-9)
-            self.write_command(transcode.encode_settings(enable_counter=True, enable_send_counts=True))
-            self.connected = True
-            self.connection_trys = 0
+            print('authentication success')
+            return
         else:
             print('authentication failed')
             self.safe_close_serial_port()
             time.sleep(1)
             print('attemping to reconnect')
-            self.connect_serial()
-
-    # def monitor_serial(self):
-    #     self.read_thread_killed_itself = False
-    #     remaining_data = np.array((), dtype=np.uint8)
-    #     while not self.close_readthread_event.is_set():
-    #         try:
-    #             if (bytes_waiting := self.ser.in_waiting):
-    #                 new_data = self.ser.read(bytes_waiting)
-    #             else:
-    #                 new_data = self.ser.read(1)
-    #         except serial.serialutil.SerialException as ex:
-    #             self.close_readthread_event.set()
-    #             self.read_thread_killed_itself = True
-    #             break
-    #         new_data_arr = np.array(list(new_data), dtype=np.uint8)
-    #         counts, counts_idx, other_messages, other_messages_idx, remaining_data, bytes_dropped = transcode.quick_decode(remaining_data, new_data_arr)
-
-    #         if bytes_dropped:
-    #             print('bytes dropped')
-
-    #         if counts_idx:
-    #             list(map(self.counter_queue.put, counts[:counts_idx]))
-
-    #         if other_messages_idx:
-    #             for message_arr in other_messages[:other_messages_idx]:
-    #                 message_identifier = message_arr[0]
-    #                 message_bytes = bytes(message_arr[1:transcode.msgin_decodeinfo[message_identifier]['message_length']])
-    #                 message = transcode.msgin_decodeinfo[message_identifier]['decode_function'](message_bytes)
-    #                 if message_identifier == transcode.msgin_identifier['devicestatus']:
-    #                     print(message)
-    #                 elif message_identifier == transcode.msgin_identifier['error']:
-    #                     print(message)
-    #                 elif message_identifier == transcode.msgin_identifier['echo']:
-    #                     # print(message)
-    #                     self.echo_queue.put(message)
-    #                 elif message_identifier == transcode.msgin_identifier['print']:
-    #                     print(message)
-
-
-# I could have a hybrid, where I
-
+            self.connect_serial(connection_attempts=connection_attempts+1)
 
     def monitor_serial(self):
-        self.read_thread_killed_itself = False
+        self.read_thread_killed_itself = False # I think this is a shit way of doing this. Probably I should just use the close_readthread_event???
         while not self.close_readthread_event.is_set():
+            # Try reading one byte. The first byte is always the message identifier
             try:
                 byte_message_identifier = self.ser.read(1)
             except serial.serialutil.SerialException as ex:
                 self.close_readthread_event.set()
                 self.read_thread_killed_itself = True
                 break
-
+            # Normally the read will timeout and return empty, but if it returns someting try to read the reminder of the message
             if byte_message_identifier:
                 message_identifier, = struct.unpack('B', byte_message_identifier)
-                if message_identifier in transcode.msgin_decodeinfo.keys():
-                    message_length = transcode.msgin_decodeinfo[message_identifier]['message_length'] - 1
+                # Only read more bytes if the identifier is valid
+                if message_identifier not in transcode.msgin_decodeinfo.keys():
+                    self.msgin_queues['bytes_dropped'].put(message_identifier)
+                else:
+                    decodeinfo = transcode.msgin_decodeinfo[message_identifier]
+                    message_length = decodeinfo['message_length'] - 1
                     try:
                         byte_message = self.ser.read(message_length)
                     except serial.serialutil.SerialException as ex:
                         self.close_readthread_event.set()
                         self.read_thread_killed_itself = True
-                        break
-                    if len(byte_message) == message_length:
-                        decode_function = transcode.msgin_decodeinfo[message_identifier]['decode_function']
+                        break   
+                    # A random byte still a chance of being valid, so the read could timeout without reading a whole message worth of bytes
+                    if len(byte_message) != message_length:
+                        self.msgin_queues['bytes_dropped'].put(message_identifier)
+                    else:
+                        # At this point, just decode the message and put it in the queue corresponding to its type.
+                        decode_function = decodeinfo['decode_function']
                         message = decode_function(byte_message)
-                        #Now decide what you actually want to do with the different messages.
-                        
-                        
-                        e lif message_identifier == transcode.msgin_identifier['echo']:
-                            self.authantication_byte = message['echoed_byte']
-                            # print(message)
-                            self.echo_queue.put(message)
-                        elif message_identifier == transcode.msgin_identifier['error']:
-
-                        elif message_identifier == transcode.msgin_identifier['print']:
-                            print(message)
-                        elif message_identifier == transcode.msgin_identifier['devicestatus']:
-                            print(message)
-                            print(self.ser.in_waiting)
-                        elif message_identifier == transcode.msgin_identifier['pulserecord']:
-                            # print(message)  
-                            self.counter_queue.put((message['pulse_count'], bytes_dropped))
-                            
-                            # print(self.ser.in_waiting)
-                else:
-                    self.bytes_dropped_queue.put(True, time.time())
-
-
-
-        self.echo_queue = queue.Queue()
-        self.notification_queue = queue.Queue()
-        self.devicestate_queue = queue.Queue()
-        self.powerlinestate_queue = queue.Queue()
-        self.internal_error_queue = queue.Queue()
-        self.easyprint_queue = queue.Queue()
-        self.bytes_dropped_queue = queue.Queue()
-
-
-
+                        queue_name = decodeinfo['message_type']
+                        self.msgin_queues[queue_name].put(message)
 
     def safe_close_serial_port(self):
         self.close_readthread_event.set()
         self.serial_read_thread.join()
         self.ser.close()
-        self.connection_trys = 0
-        self.connected = False
-
-    def close(self):
-        self.disable_counter()
-        self.disable_send()
-        self.safe_close_serial_port()
 
     def write_command(self, encoded_command):
         # not really sure if this is the correct place to put this. 
@@ -221,7 +139,7 @@ class PulseGenerator():
             print('write command failed')
             self.safe_close_serial_port()
 
-#########################
+    ######################### Write command functions
     def write_echo(self, byte_to_echo):
         command = transcode.encode_echo(byte_to_echo)
         self.write_command(command)
@@ -256,6 +174,15 @@ class PulseGenerator():
             self.write_command(b''.join(instructions)) 
         else:
             self.write_command(instructions) 
+
+    ######################### Some functions that will help in reading, waiting, doing stuff. I am not sure how future programs will interact with this
+    def read_all_messages(self, timeout=0):
+        t0 = time.time()
+        while time.time() - t0 < timeout: #this isnt correct. wont run on timeout=0
+            for q in self.msgin_queues.values():
+                message = q.get(block=False)    #this isnt correct either. will only read the first message in every pipe.
+                if message: print(message)
+            if timeout: time.sleep(0.1)
 
 # class PulseGenerator:
 #     def __init__(self, port='COM4'):

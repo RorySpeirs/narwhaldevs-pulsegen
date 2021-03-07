@@ -276,22 +276,16 @@ def state_multiformat_to_int(state):
 #########################################################
 # constants
 msgin_decodeinfo = {
-    100:{'message_length':3, 'decode_function':decode_internal_error},
-    101:{'message_length':9, 'decode_function':decode_serialecho},
-    102:{'message_length':9, 'decode_function':decode_easyprint},
-    103:{'message_length':17, 'decode_function':decode_devicestate},
-    104:{'message_length':4, 'decode_function':decode_notification},
-    105:{'message_length':8, 'decode_function':decode_powerlinestate}
+    100:{'message_length':3,    'decode_function':decode_internal_error,    'message_type':'error'},
+    101:{'message_length':9,    'decode_function':decode_serialecho,        'message_type':'echo'},
+    102:{'message_length':9,    'decode_function':decode_easyprint,         'message_type':'print'},
+    103:{'message_length':17,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
+    104:{'message_length':4,    'decode_function':decode_notification,      'message_type':'notification'},
+    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'}
     }
 
-msgin_identifier = {
-    'error':100,
-    'echo':101,
-    'print':102,
-    'devicestate':103,
-    'notification':104,
-    'powerlinestate':105
-    }
+# This is a "reverse lookup" dictionaty for the msgin_decodeinfo. I don't think I use this much/at all. It can probably be deleted.
+msgin_identifier = {value['message_type']:key for key, value in msgin_decodeinfo.items()}
 
 decode_lookup = {
     'clock_source':{1:'internal', 0:'external'},
