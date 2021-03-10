@@ -32,9 +32,11 @@ class PulseGenerator():
             self.valid_ports.append(mock_comport)
 
     def connect_serial(self, connection_attempts=0):
+        '''This is a bit funky, because it recursively calls itself until the connection_attempt limit is reached
+        but it works pretty well'''
         if connection_attempts >= 6:
             print('Could not connect device')
-            return
+            return False #This is ultimately where the connection failure comes from
         if self.valid_ports:
             # now try a port
             comport = self.valid_ports.pop(0)
@@ -44,15 +46,19 @@ class PulseGenerator():
             except Exception as ex:
                 #if port throws an error on open, wait a bit, then try a new one
                 time.sleep(0.1)
-                self.connect_serial(connection_attempts=connection_attempts+1)
-                return
+                return self.connect_serial(connection_attempts = connection_attempts + 1)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
             self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
             self.serial_read_thread.start()
-            self.tested_authantication_byte = np.random.bytes(1)
-            self.write_command(transcode.encode_echo(self.tested_authantication_byte))
-            self.check_authantication_byte(connection_attempts)
+
+            tested_authantication_byte = np.random.bytes(1)
+            self.write_command(transcode.encode_echo(tested_authantication_byte))
+            if self.check_authantication_byte(tested_authantication_byte):
+                return True #This is ultimately where the connection success comes from
+            else:
+                self.close_serial_read_thread()
+                return self.connect_serial(connection_attempts = connection_attempts + 1)
         else:
             # if there are no ports left in the list, add any valid ports to the list  
             comports = list(serial.tools.list_ports.comports())
@@ -61,13 +67,13 @@ class PulseGenerator():
                     if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
                         self.valid_ports.append(comport)
             if self.valid_ports:
-                self.connect_serial(connection_attempts=connection_attempts+1)
+                return self.connect_serial(connection_attempts = connection_attempts + 1)
             else:
                 print('Hardware not found, searching for hardware...')
                 time.sleep(1)
-                self.connect_serial(connection_attempts=connection_attempts+1)
+                return self.connect_serial(connection_attempts = connection_attempts + 1)
 
-    def check_authantication_byte(self, connection_attempts):
+    def check_authantication_byte(self, tested_authantication_byte):
         echoed_bytes = []
         echo_queue = self.msgin_queues['echo']
         while not echo_queue.empty:
@@ -77,15 +83,12 @@ class PulseGenerator():
             echoed_bytes.append(message['echoed_byte'])
         except queue.Empty as ex:
             pass
-        if self.tested_authantication_byte in echoed_bytes:
+        if tested_authantication_byte in echoed_bytes:
             print('authentication success')
-            return
+            return True
         else:
             print('authentication failed')
-            self.safe_close_serial_port()
-            time.sleep(1)
-            print('attemping to reconnect')
-            self.connect_serial(connection_attempts=connection_attempts+1)
+            return False
 
     def monitor_serial(self):
         self.read_thread_killed_itself = False # I think this is a shit way of doing this. Probably I should just use the close_readthread_event???
@@ -122,22 +125,23 @@ class PulseGenerator():
                         queue_name = decodeinfo['message_type']
                         self.msgin_queues[queue_name].put(message)
 
-    def safe_close_serial_port(self):
+    def close_serial_read_thread(self):
         self.close_readthread_event.set()
         self.serial_read_thread.join()
+        self.close_readthread_event.clear()
         self.ser.close()
 
     def write_command(self, encoded_command):
         # not really sure if this is the correct place to put this. 
         # basically, what i need is that if the read_thread shits itself, the main thread will automatically safe close the connection, and then try to reconnect.
         if self.read_thread_killed_itself:
-            self.safe_close_serial_port()
+            self.close_serial_read_thread()
             self.connect_serial()
         try:
             self.ser.write(encoded_command)
         except Exception as ex:
             print('write command failed')
-            self.safe_close_serial_port()
+            self.close_serial_read_thread()
 
     ######################### Write command functions
     def write_echo(self, byte_to_echo):

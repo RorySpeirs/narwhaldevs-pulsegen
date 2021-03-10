@@ -506,29 +506,23 @@ def testing(pg):
     currently running '''
 
 def test():
-    # import queue
-    # a = ['a', 'b', 'c']
+    class MyClass():
+        def __init__(self):
+            a = 1
+        
+        def boo(self):
+            return 'hoop'
 
-    # d = {key:queue.Queue() for key in a}
-    # for element in d.values():
-    #     print(element)
-
-    # class a: pass
-    # a.c = 1
-    # print(a.c)
-    # a = object()
-    # a.c = 1
-    # print(a.c)
-
-    def t2(a=0):
-        print(a)
-    a = 1
+    c = MyClass()
+    print(c.boo())
 
 #Make program run now...
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
-    pg.connect_serial()
-
+    assert pg.connect_serial(), 'Could not connect to PulseGenerator. Check it is plugged in and FTDI VCP drivers are installed'
+    # a = pg.connect_serial()
+    # print(a)
+    # print(pg.connect_serial())
     testing(pg)
     # test()
 
