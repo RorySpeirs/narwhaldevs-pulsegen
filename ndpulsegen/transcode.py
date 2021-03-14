@@ -191,11 +191,11 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     tags =                      struct.pack('<Q', tags)[:1]
     return message_identifier + powerline_trigger_delay + tags
 
-def encode_action(enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
+def encode_action(software_run_enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
     ''' Messageout identifier:  1 byte: 152
     Message format:                             BITS USED   FPGA INDEX.
     tags:                       1 byte  [0]     8 bits      [0+:8]    
-        run_enable                              2 bits      [0+:2]      bit[1] indicates if "run_enable" is to be modified. bit[0] is the actual enable setting, it is ignored it bit[0] = 0   
+        software_run_enable                     2 bits      [0+:2]      bit[1] indicates if "software_run_enable" is to be modified. bit[0] is the actual enable setting, it is ignored it bit[0] = 0   
         trigger_now                             1 bit       [2] 
         request_state                           1 bit       [3]
         reset_outpoot_coordinator               1 bit       [4] 
@@ -203,14 +203,14 @@ def encode_action(enable=None, trigger_now=False, request_state=False, reset_out
         notify_when_current_run_finished        1 bit       [6]
         request_powerline_state                 1 bit       [7]
     '''
-    enable_tag =                        encode_lookup['run_enable'][enable] << 0
+    software_run_enable_tag =                        encode_lookup['software_run_enable'][software_run_enable] << 0
     trigger_now_tag =                   encode_lookup['trigger_now'][trigger_now] << 2
     request_state_tag =                 encode_lookup['request_state'][request_state] << 3
     reset_output_coordinator_tag =      encode_lookup['reset_output_coordinator'][reset_output_coordinator] << 4
     disable_after_current_run =         encode_lookup['disable_after_current_run'][disable_after_current_run] << 5
     notify_when_current_run_finished =  encode_lookup['notify_when_finished'][notify_when_current_run_finished] << 6
     request_powerline_state_tag =       encode_lookup['request_powerline_state'][request_powerline_state] << 7
-    tags = enable_tag | trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | notify_when_current_run_finished | request_powerline_state_tag
+    tags = software_run_enable_tag | trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | notify_when_current_run_finished | request_powerline_state_tag
     message_identifier =    struct.pack('B', msgout_identifier['action_request'])
     tags =                  struct.pack('<Q', tags)[:1]
     return message_identifier + tags
@@ -318,7 +318,7 @@ msgout_identifier = {
     }
 
 encode_lookup = {
-    'run_enable':{True:0b11, False:0b10, None:0b00}, 
+    'software_run_enable':{True:0b11, False:0b10, None:0b00}, 
     'trigger_now':{True:1, False:0},
     'request_state':{True:1, False:0},
     'request_powerline_state':{True:1, False:0},

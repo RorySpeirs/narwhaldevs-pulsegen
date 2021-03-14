@@ -2,11 +2,9 @@ import numpy as np
 import time
 import serial
 import serial.tools.list_ports
-import warnings
 import struct
-
-import queue
 import threading
+import queue
 from . import transcode
 
 class PulseGenerator():
@@ -23,7 +21,6 @@ class PulseGenerator():
         self.msgin_queues['bytes_dropped'] = queue.Queue()
 
         self.close_readthread_event = threading.Event()
-        self.read_thread_killed_itself = False
 
         self.valid_ports = []
         if port:
@@ -46,7 +43,7 @@ class PulseGenerator():
             except Exception as ex:
                 #if port throws an error on open, wait a bit, then try a new one
                 time.sleep(0.1)
-                return self.connect_serial(connection_attempts = connection_attempts + 1)
+                return self.connect_serial(connection_attempts + 1)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
             self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
@@ -58,7 +55,7 @@ class PulseGenerator():
                 return True #This is ultimately where the connection success comes from
             else:
                 self.close_serial_read_thread()
-                return self.connect_serial(connection_attempts = connection_attempts + 1)
+                return self.connect_serial(connection_attempts + 1)
         else:
             # if there are no ports left in the list, add any valid ports to the list  
             comports = list(serial.tools.list_ports.comports())
@@ -67,38 +64,37 @@ class PulseGenerator():
                     if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
                         self.valid_ports.append(comport)
             if self.valid_ports:
-                return self.connect_serial(connection_attempts = connection_attempts + 1)
+                return self.connect_serial(connection_attempts + 1)
             else:
                 print('Hardware not found, searching for hardware...')
                 time.sleep(1)
-                return self.connect_serial(connection_attempts = connection_attempts + 1)
+                return self.connect_serial(connection_attempts + 1)
 
     def check_authantication_byte(self, tested_authantication_byte):
         echoed_bytes = []
         echo_queue = self.msgin_queues['echo']
         while not echo_queue.empty:
-            echoed_bytes.append(echo_queue.get(block=False)['echoed_byte'])
+            message = echo_queue.get(block=False)
+            echoed_bytes.append(message['echoed_byte'])
         try:
             message = echo_queue.get(timeout=1)
             echoed_bytes.append(message['echoed_byte'])
         except queue.Empty as ex:
             pass
         if tested_authantication_byte in echoed_bytes:
-            print('authentication success')
+            # print('authentication success')
             return True
         else:
-            print('authentication failed')
+            # print('authentication failed')
             return False
 
     def monitor_serial(self):
-        self.read_thread_killed_itself = False # I think this is a shit way of doing this. Probably I should just use the close_readthread_event???
         while not self.close_readthread_event.is_set():
             # Try reading one byte. The first byte is always the message identifier
             try:
                 byte_message_identifier = self.ser.read(1)
             except serial.serialutil.SerialException as ex:
                 self.close_readthread_event.set()
-                self.read_thread_killed_itself = True
                 break
             # Normally the read will timeout and return empty, but if it returns someting try to read the reminder of the message
             if byte_message_identifier:
@@ -113,7 +109,6 @@ class PulseGenerator():
                         byte_message = self.ser.read(message_length)
                     except serial.serialutil.SerialException as ex:
                         self.close_readthread_event.set()
-                        self.read_thread_killed_itself = True
                         break   
                     # A random byte still a chance of being valid, so the read could timeout without reading a whole message worth of bytes
                     if len(byte_message) != message_length:
@@ -134,7 +129,7 @@ class PulseGenerator():
     def write_command(self, encoded_command):
         # not really sure if this is the correct place to put this. 
         # basically, what i need is that if the read_thread shits itself, the main thread will automatically safe close the connection, and then try to reconnect.
-        if self.read_thread_killed_itself:
+        if self.close_readthread_event.is_set():
             self.close_serial_read_thread()
             self.connect_serial()
         try:
@@ -181,12 +176,82 @@ class PulseGenerator():
 
     ######################### Some functions that will help in reading, waiting, doing stuff. I am not sure how future programs will interact with this
     def read_all_messages(self, timeout=0):
-        t0 = time.time()
-        while time.time() - t0 < timeout: #this isnt correct. wont run on timeout=0
+        if timeout != 0:
+            t0 = time.time()
+            while True:
+                self.read_all_current_messages()
+                if time.time() - t0 > timeout:
+                    break
+        else:
+            self.read_all_current_messages()
+
+    def read_all_current_messages(self):
             for q in self.msgin_queues.values():
-                message = q.get(block=False)    #this isnt correct either. will only read the first message in every pipe.
-                if message: print(message)
-            if timeout: time.sleep(0.1)
+                while not q.empty():
+                    message = q.get()
+                    print(message)
+
+    def get_state(self, timeout=None):
+        state_queue = self.msgin_queues['devicestate']
+        #Empty the queue
+        while not state_queue.empty:
+            state_queue.get(block=False)
+        #request the state
+        self.write_action(request_state=True)
+        # wait for the state to be sent
+        try:
+            return state_queue.get(timeout=1)
+        except queue.Empty as ex:
+            return None
+
+    def get_powerline_state(self, timeout=None):
+        state_queue = self.msgin_queues['powerlinestate']
+        #Empty the queue
+        while not state_queue.empty:
+            state_queue.get(block=False)
+        #request the state
+        self.write_action(request_powerline_state=True)
+        # wait for the state to be sent
+        try:
+            return state_queue.get(timeout=1)
+        except queue.Empty as ex:
+            return None
+
+    def return_on_message_type(self, message_identifier, timeout=None, print_all_messages=False):
+        timeout_remaining = timeout
+        t0 = time.time()
+        while True:
+            identifier, message = self._get_message(timeout_remaining, print_all_messages)
+            if identifier == message_identifier:
+                return message
+            if identifier is None:
+                return
+            if timeout is not None:
+                timeout_remaining = max(timeout - (time.time() - t0), 0.0)
+
+    def return_on_notification(self, finished=None, triggered=None, address=None, timeout=None):
+        # if no criteria are specified, return on any notification received
+        return_on_any = True if finished is triggered is address is None else False
+        timeout_remaining = timeout
+        t0 = time.time()
+        notification_queue = self.msgin_queues['notification']
+        while True:
+            try:
+                # wait for a notification. 
+                notification = notification_queue.get(timeout=timeout_remaining)
+                # check if notification satisfies any of the criteria set 
+                if (notification['address_notify'] and notification['address'] == address) or (notification['trig_notify'] == triggered) or (notification['finished_notify'] == finished) or return_on_any:
+                    return notification
+            except queue.Empty as ex:
+                # Reached timeout limit.
+                return None
+            if timeout is not None:
+                # If a notification was recieved that didn't match any of the specified criteria, calculate the remaining time until the requested timeout
+                timeout_remaining = max(timeout - (time.time() - t0), 0.0)
+
+
+
+
 
 # class PulseGenerator:
 #     def __init__(self, port='COM4'):

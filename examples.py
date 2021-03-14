@@ -1,7 +1,6 @@
 import numpy as np
-import time as systime
-
 import ndpulsegen
+import time
 
 def software_trig(pg):
     # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
@@ -33,11 +32,10 @@ def software_trig(pg):
     instructions = [instr0, instr1, instr3, instr2] #Note that the instructions don't need to be loaded in order, since you specify a RAM address explicitly.
     pg.write_instructions(instructions)
 
-    # pg.print_instruction(instruction[0])
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
 
-    pg.read_all_messages_in_pipe(timeout=1, print_all_messages=True)
+    pg.read_all_messages(timeout=0.1)
 
 def hardware_trig(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
@@ -49,7 +47,7 @@ def hardware_trig(pg):
     pg.write_instructions(instructions)
 
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='hardware', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-    pg.write_action(trigger_now=True)
+
 
 def run_mode_continuous(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
@@ -63,7 +61,7 @@ def run_mode_continuous(pg):
     pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
 
-    systime.sleep(3)
+    time.sleep(3)
     pg.write_action(disable_after_current_run=True)
 
 def abort_run(pg):
@@ -76,7 +74,7 @@ def abort_run(pg):
     pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
 
-    systime.sleep(5)
+    time.sleep(5)
     pg.write_action(reset_output_coordinator=True)
 
 
@@ -93,11 +91,11 @@ def run_enable_software(pg):
     pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
 
-    systime.sleep(1)
-    pg.write_action(enable=False)
-    systime.sleep(1)
-    pg.write_action(enable=True)    
-    systime.sleep(3)
+    time.sleep(1)
+    pg.write_action(software_run_enable=False)
+    time.sleep(1)
+    pg.write_action(software_run_enable=True)    
+    time.sleep(3)
     pg.write_action(disable_after_current_run=True)
 
 def run_enable_hardware(pg):
@@ -117,7 +115,7 @@ def run_enable_hardware(pg):
     kb = ndpulsegen.console_read.KBHit()
     while True:
         if kb.kbhit():
-            if kb.getch() == chr(27).encode():
+            if ord(kb.getch()) == 27:
                 break   
     kb.set_normal_term()
     pg.write_action(disable_after_current_run=True)
@@ -125,24 +123,21 @@ def run_enable_hardware(pg):
 
 
 def get_state(pg):
-    # I should package this up into a single convenient function
 
-    pg.write_action(request_state=True)
-    state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
+    state = pg.get_state()
     print(state)
 
-    pg.write_action(request_powerline_state=True)
-    powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
+    powerline_state = pg.get_powerline_state()
     print(powerline_state)
 
 def set_static_state(pg):
     # outputs are set by 24 bits of an integer. Rightmost bit is output 0.
     pg.write_static_state(0b11111111)
-    systime.sleep(1)
+    time.sleep(1)
     pg.write_static_state([0, 0, 1])
-    systime.sleep(1)
+    time.sleep(1)
     pg.write_static_state(0b101)
-    systime.sleep(1)
+    time.sleep(1)
     pg.write_static_state(np.zeros(24))
 
 def notify_when_finished(pg):
@@ -172,13 +167,12 @@ def notify_on_specific_instructions(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
     
-    print(pg.return_on_notification(address=1, timeout=6))
+    print(pg.return_on_notification(address=1, timeout=1))
     print(pg.return_on_notification(address=3, timeout=6))
     '''Notice that instruction 0 is tagged to notify the computer, which happens, but the return_on_noticication
     fucntion ignores it, because it is looking for address=1'''
 
     
-
 def notify_on_main_trigger_and_trigger_delay_and_duration(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instr0 = ndpulsegen.transcode.encode_instruction(0,0b11111111,1,0,0, False, False, False)
@@ -188,7 +182,7 @@ def notify_on_main_trigger_and_trigger_delay_and_duration(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
     
-    #See that notify_on_main_trig=True, AND we are delaying the trigger by 3cycles, AND we have made the hardware trigger out stay high for 3cycles
+    #See that notify_on_main_trig=True, AND we are delaying the trigger by 2cycles, AND we have made the hardware trigger out stay high for 3cycles
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=2, notify_on_main_trig=True, trigger_length=3)
     
     pg.write_action(trigger_now=True)
@@ -224,13 +218,13 @@ def stop_and_wait_on_specific_instructions(pg):
     pg.write_action(trigger_now=True)
 
     print(pg.return_on_notification(address=1))
-    print('Instruction 1 exectued and contained a stop_and_wait tag. Pythin will now sleep for 1 second before sending another trigger.')
-    systime.sleep(1)
+    print('Instruction 1 exectued and contained a stop_and_wait tag. Python will now sleep for 1 second before sending another trigger.')
+    time.sleep(1)
     pg.write_action(trigger_now=True)
 
     print(pg.return_on_notification(address=3))
-    print('Instruction 3 exectued and contained a stop_and_wait tag. Pythin will now sleep for 1.5 second before sending another trigger.')
-    systime.sleep(1.5)
+    print('Instruction 3 exectued and contained a stop_and_wait tag. Python will now sleep for 1.5 second before sending another trigger.')
+    time.sleep(1.5)
     pg.write_action(trigger_now=True, notify_when_current_run_finished=True)
     pg.return_on_notification(finished=True)
 
@@ -246,7 +240,7 @@ def using_loops_normally(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
 
     pg.write_action(trigger_now=True, notify_when_current_run_finished=True)
-    pg.return_on_notification(finished=True, print_all_messages=True)
+    pg.read_all_messages(timeout=0.1)
     '''Notice here that all messages will be printed as they are received, but it wont return until it receives a "finished" notification'''
 
 
@@ -271,7 +265,7 @@ def using_loops_advanced(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
 
     pg.write_action(trigger_now=True, notify_when_current_run_finished=True)
-    pg.return_on_notification(finished=True, print_all_messages=True) 
+    pg.read_all_messages(timeout=0.1)
 
 
 def powerline_test_global_setting(pg):
@@ -289,10 +283,10 @@ def powerline_test_global_setting(pg):
     pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=0)
     pg.write_action(trigger_now=True)
 
-    systime.sleep(2)
+    time.sleep(2)
     '''You can also choose at what point in the AC line cycle you want the device to restart'''
     pg.write_action(request_powerline_state=True)
-    powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
+    powerline_state = pg.get_powerline_state()
     desired_trigger_phase = 90 #desired phase in degrees
     trigger_delay = desired_trigger_phase/360*powerline_state['powerline_period']
     pg.write_powerline_trigger_options(powerline_trigger_delay=int(trigger_delay))
@@ -329,7 +323,7 @@ def powerline_test_instruction_tag_continuous_run(pg):
     pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
 
     pg.write_action(trigger_now=True)
-    systime.sleep(5)
+    time.sleep(5)
     pg.write_action(disable_after_current_run=True)
 
 
@@ -340,9 +334,9 @@ def fully_load_ram_test(pg):
         instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,0b11111111,1,0,0, False, False, False))
         instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,0b00000000,1,0,0, False, False, False))
 
-    tstart = systime.time()
+    tstart = time.time()
     pg.write_instructions(instructions)
-    tend = systime.time()
+    tend = time.time()
 
     time_total = tend-tstart
     print('Time required to load the ram FULL of instructions = {}. Which is {} instructions/ms'.format(time_total, (ram_address+1)/(time_total*1E3)))
@@ -367,7 +361,7 @@ def put_into_and_recover_from_erroneous_state(pg):
     '''Up to this point, everything is fine and normal. The device will execute instructions 0, 1, 2 in ~200microseconds, and then
     and then wait 3 seconds to execute instruction 3 (ram address 3)'''
 
-    systime.sleep(1) 
+    time.sleep(1) 
     '''This sleep just ensures that the device is outputting instruction at address 2, after which instruction 3 will execute.'''
 
     pg.write_device_options(final_ram_address=1)
@@ -439,9 +433,8 @@ def pcb_connection_check(pg):
     kb = ndpulsegen.console_read.KBHit()
     while True:
         if kb.kbhit():
-            if kb.getch() == chr(27).encode():
+            if ord(kb.getch()) == 27:
                 break   
-        systime.sleep(0.1) 
     kb.set_normal_term()
     pg.write_action(disable_after_current_run=True)
     print('Looping stopped.')
@@ -470,61 +463,22 @@ def debug_test(pg):
 def testing(pg):
 
     pg.write_device_options(final_ram_address=7123, run_mode='single', trigger_mode='either', trigger_time=12345678, notify_on_main_trig=True, trigger_length=255)
-    pg.write_action(enable=False)
+    # pg.write_action(software_run_enable=False)
     pg.write_action(request_state=True)
     # state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
-    pg.read_all_messages()
-    # print(state)
-    
-    # pg.write_device_options(trigger_length=123)
-    # pg.write_action(request_state=True)
-    # state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['devicestate'], timeout=1)
-    # print(state)
 
-    # pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
-    # pg.write_action(request_powerline_state=True)
-    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
-    # print(powerline_state)
-
-    # pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=1999999)
-    # pg.write_action(request_powerline_state=True)
-    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
-    # print(powerline_state)
-
-    # pg.write_powerline_trigger_options(trigger_on_powerline=False)
-    # pg.write_action(request_powerline_state=True)
-    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
-    # print(powerline_state)
-
-    # pg.write_powerline_trigger_options(powerline_trigger_delay=65)
-    # pg.write_action(request_powerline_state=True)
-    # powerline_state = pg.return_on_message_type(message_identifier=ndpulsegen.transcode.msgin_identifier['powerlinestate'], timeout=1)
-    # print(powerline_state)
-
+    pg.read_all_messages(timeout=0.1)
     '''I need to look at the run_enable response. There is a software run_enable setting, that is actually part of the "actions" command. But it is saved internally I think
     so I probably need to return it as a setting. At the moment, when I return the device options, I return "run_enable", which is actually just whether or not the clock is
     currently running '''
 
-def test():
-    class MyClass():
-        def __init__(self):
-            a = 1
-        
-        def boo(self):
-            return 'hoop'
-
-    c = MyClass()
-    print(c.boo())
 
 #Make program run now...
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial(), 'Could not connect to PulseGenerator. Check it is plugged in and FTDI VCP drivers are installed'
-    # a = pg.connect_serial()
-    # print(a)
-    # print(pg.connect_serial())
-    testing(pg)
-    # test()
+    # testing(pg)
+
 
     '''If there is a bug, this will probably reset things and the device should work again.
     Try to remember all the details about how the bug arose, and replicate it straight away if you can.'''
@@ -546,13 +500,6 @@ if __name__ == "__main__":
     # stop_and_wait_on_specific_instructions(pg)
     # using_loops_normally(pg)
     # using_loops_advanced(pg)
-
-    '''
-    Changing the powerline settings arent working at the moment because I did that dumb thing when I made the transcode module.
-    I need to change the format of the powerline settings and general settings, so that I dont need to store them locally
-
-    and they are also just not working as expected, but I don't want to look into this until I have fixed the actual problem
-    '''
     # powerline_test_global_setting(pg)  
     # powerline_test_instruction_tag_single_run(pg)
     # powerline_test_instruction_tag_continuous_run(pg)
