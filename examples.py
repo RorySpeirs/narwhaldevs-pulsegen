@@ -485,7 +485,7 @@ if __name__ == "__main__":
     #pg.write_action(reset_output_coordinator=True)
 
     '''These give an introduction on how to program the device, and what capabilities it has'''
-    # software_trig(pg)
+    software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
