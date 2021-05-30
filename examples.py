@@ -32,7 +32,7 @@ def software_trig(pg):
     instructions = [instr0, instr1, instr3, instr2] #Note that the instructions don't need to be loaded in order, since you specify a RAM address explicitly.
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='hardware', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
 
     pg.read_all_messages(timeout=0.1)
