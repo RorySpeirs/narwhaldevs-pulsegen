@@ -2,11 +2,13 @@ import numpy as np
 import ndpulsegen
 import time
 
+
 def software_trig(pg):
     # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instr0 = ndpulsegen.transcode.encode_instruction(0,0b100000000000000011111111,1,0,0, False, False, False) #note: The auto_trig_on_powerline tag has been omitted from modt examples. It defaults to False.
     instr1 = ndpulsegen.transcode.encode_instruction(1,0b000000000000000010101010,1,0,0, False, False, False)
     instr2 = ndpulsegen.transcode.encode_instruction(2,0b100000000000000000001111,2,0,0, False, False, False)
+
 
     #Instructions can be geneated by specifying the states as an integer (binary represetation representing output states)
     #Or they can be specified in a list/tuple/array
@@ -19,7 +21,7 @@ def software_trig(pg):
     states = [0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     # states = [0,0,0,1,1] # if fewer than 24 outputs are specified, trailing values are assumed to be zero
     # states = [False, False, False, True, True] 
-    instr3 = ndpulsegen.transcode.encode_instruction(3,states,3,0,0, False, False, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,states,1,0,0, False, False, False)
 
 
     # Instructions can be written to the device one at a time... or
@@ -31,10 +33,9 @@ def software_trig(pg):
     # Or they can be written all at once, which is usually much faster
     instructions = [instr0, instr1, instr3, instr2] #Note that the instructions don't need to be loaded in order, since you specify a RAM address explicitly.
     pg.write_instructions(instructions)
-
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='hardware', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
-
+ 
     pg.read_all_messages(timeout=0.1)
 
 def hardware_trig(pg):
@@ -479,19 +480,26 @@ if __name__ == "__main__":
     assert pg.connect_serial(), 'Could not connect to PulseGenerator. Check it is plugged in and FTDI VCP drivers are installed'
     # testing(pg)
 
+    '''
+    SHIIIIITTTTTTTTT!!!!!!
+    Something isn't working.
+    It is connecting. But it isn't triggering!!!!!!!!!
+    
+    
+    '''
 
     '''If there is a bug, this will probably reset things and the device should work again.
     Try to remember all the details about how the bug arose, and replicate it straight away if you can.'''
-    #pg.write_action(reset_output_coordinator=True)
+    # pg.write_action(reset_output_coordinator=True)
 
     '''These give an introduction on how to program the device, and what capabilities it has'''
-    software_trig(pg)
+    # software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
     # run_enable_software(pg)
     # run_enable_hardware(pg)
-    # get_state(pg)          
+    get_state(pg)          
     # set_static_state(pg)
     # notify_when_finished(pg)
     # notify_on_specific_instructions(pg)

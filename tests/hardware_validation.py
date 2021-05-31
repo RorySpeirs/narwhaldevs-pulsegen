@@ -45,6 +45,7 @@ def software_trig(pg):
 
     pg.read_all_messages(timeout=0.1)
 
+
 def simple_sequence(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instructions = []
@@ -52,48 +53,105 @@ def simple_sequence(pg):
         instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,[1, 1],1,0,0, False, False, False))
         instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,[0, 0],1,0,0, False, False, False))
 
+    pg.write_instructions(instructions)
+
     pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
-def notify_on_specific_instructions(pg):
-    #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    instr0 = ndpulsegen.transcode.encode_instruction(0,0b11111111,1,0,0, False, False, True)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,0b10101010,20000000,0,0, False, False, True) 
-    instr2 = ndpulsegen.transcode.encode_instruction(2,0b00001111,200000000,0,0, False, False, False) 
-    instr3 = ndpulsegen.transcode.encode_instruction(3,0b00011000,300000000,0,0, False, False, True) 
-    instructions = [instr0, instr1, instr2, instr3]
-    pg.write_instructions(instructions)
+def setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=0.5E-3):
+    on_off = {True:'ON', False:'OFF'}
+    scope.write(f':CHANnel1:DISPlay {on_off[Ch1]}')
+    scope.write(f':CHANnel2:DISPlay {on_off[Ch2]}')
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-    pg.write_action(trigger_now=True)
-    
-    print(pg.return_on_notification(address=1, timeout=1))
-    print(pg.return_on_notification(address=3, timeout=6))
-    '''Notice that instruction 0 is tagged to notify the computer, which happens, but the return_on_noticication
-    fucntion ignores it, because it is looking for address=1'''
+    scope.write(':RUN')
+    scope.write(':CHANnel1:BWLimit OFF')    
+    scope.write(':CHANnel1:COUPling DC')
+    scope.write(':CHANnel1:INVert OFF')
+    scope.write(':CHANnel1:OFFSet -1.0')
+    scope.write(':CHANnel1:TCAL 0.0')    #I dont know what this does
+    scope.write(':CHANnel1:PROBe 1')
+    scope.write(':CHANnel1:SCALe 0.5')
+    scope.write(':CHANnel1:VERNier OFF')
+
+    scope.write(':CHANnel2:BWLimit OFF')    
+    scope.write(':CHANnel2:COUPling DC')
+    scope.write(':CHANnel2:INVert OFF')
+    scope.write(':CHANnel2:OFFSet -1.0')
+    scope.write(':CHANnel2:TCAL 0.0')    #I dont know what this does
+    scope.write(':CHANnel2:PROBe 1')
+    scope.write(':CHANnel2:SCALe 0.5')
+    scope.write(':CHANnel2:VERNier OFF')
+
+    scope.write(':CURSor:MODE OFF')
+    scope.write(':MATH:DISPlay OFF')
+    scope.write(':REFerence:DISPlay OFF')
+
+    memory_depth = scope.max_memory_depth()
+    scope.write(f':ACQuire:MDEPth {int(memory_depth)}')
+    scope.write(':ACQuire:TYPE NORMal')
+
+    scope.write(':TIMebase:MODE MAIN')
+    scope.write(':TIMebase:MAIN:SCALe 500E-6') 
+    sample_rate = float(scope.query(':ACQuire:SRATe?'))
+    scope.write(f':TIMebase:MAIN:OFFSet {0.5*memory_depth/sample_rate - pre_trig_record}')     # Determines where to start recording points. The default is to record equally either side of the triggger. The last nummer added on here is how long to record before the trigger. P1-123.
+    scope.write(':TIMebase:DELay:ENABle OFF')
+
+    scope.write(':TRIGger:MODE EDGE')
+    scope.write(':TRIGger:COUPling DC')
+    scope.write(':TRIGger:HOLDoff 16E-9')
+    scope.write(':TRIGger:NREJect OFF')
+    scope.write(':TRIGger:EDGe:SOURce CHANnel1')  #EXT, CHANnel1, CHANnel2, AC
+    scope.write(':TRIGger:EDGE:SLOPe POSitive')
+    scope.write(':TRIGger:EDGE:LEVel 1.0')
+
+    # scope.write(':RUN')
+    # scope.write(':STOP')
+    scope.write(':SINGLE')
+    # scope.write(':TFORce')
+
+def random_sequence(pg):
+    np.random.seed(seed=19870909)   #Seed it so the sequence is the same every time i run it.
+
+    instruction_num = 8192
+    states = np.empty((instruction_num, 24), dtype=np.int)
+    instructions = []
+    durations = 1 + np.random.poisson(lam=1, size=instruction_num)
+    for ram_address, duration in enumerate(durations):
+        state = np.random.randint(0, high=2, size=24, dtype=int)
+        states[ram_address, :] = state
+        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,state))
+
+    pg.write_instructions(instructions)
+    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+
+    return durations, states
 
 if __name__ == "__main__":
-
-    # scope = rigol_ds1202z_e.RigolScope()
-    # scope.default_setup(Ch1=True, Ch2=False, pre_trig_record=0.5E-3)
-
+    scope = rigol_ds1202z_e.RigolScope()
+    # scope.default_setup(Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
+    setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
+    time.sleep(0.5)
 
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial()
     # simple_sequence(pg)
-    # software_trig(pg)
-    notify_on_specific_instructions(pg)
-    '''
-    SHIIIIITTTTTTTTT!!!!!!
-    Something isn't working.
-    It is connecting. But it isn't triggering!!!!!!!!!
-    
-    
-    '''
+    # # software_trig(pg)
+    durations, states = random_sequence(pg)
+    pg.write_action(trigger_now=True)
+    pg.read_all_messages(timeout=0.1)
 
-    # t, V = scope.read_data(channel=1, duration=1E-3)
-    # plot(t*1E6, V, label='ch0')
-    # xlabel('time (μs)')
-    # ylabel('output (V)')
+    # # pg.write_action(reset_output_coordinator=True)
+    # # print(pg.get_state())
+
+    t_programmed = np.cumsum(durations)*10E-9 + 0.45E-6 #This isnt right. Think harder about it.
+    V_programmed = states[:,0]
+    # plot(t_programmed, V_programmed)
     # show()
+
+    t, V = scope.read_data(channel=1, duration=100E-6)
+    plot(t*1E6, V, label='ch0')
+    plot(t_programmed*1E6, V_programmed)
+    xlabel('time (μs)')
+    ylabel('output (V)')
+    show()
