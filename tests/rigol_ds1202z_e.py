@@ -180,6 +180,7 @@ def setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=0.5E-3):
     # scope.write(':STOP')
     scope.write(':SINGLE')
     # scope.write(':TFORce')
+    time.sleep(0.5)
 
 
 if __name__ == '__main__':
