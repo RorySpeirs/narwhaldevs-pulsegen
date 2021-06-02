@@ -1,6 +1,7 @@
 import numpy as np
 import time
-
+import random
+import struct
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -93,41 +94,104 @@ def random_sequence(pg, seed=19870909):
     instructions = []
     # durations = 1 + np.random.poisson(lam=1, size=instruction_num)
     durations = np.random.randint(1, high=5, size=instruction_num, dtype=int)  
-    for ram_address, duration in enumerate(durations):
-        if ram_address in [0, instruction_num-1]:
-            if ram_address == 0:
-                state = np.ones(24, dtype=np.int)   #just makes them all go high initially
-            else:
-                state = np.zeros(24, dtype=np.int)   #just makes them all go low in theyre final state (helps with triggering off a single pulse)
+
+    # I want a low probablility that any given instruction actually does loop back to an earlier address, but if it does, I want it to do it more than just once ()
+    go_to_probablility = 0.1
+    goto_utilised = np.random.choice(a=[1, 0], size=instruction_num, p=[go_to_probablility, 1-go_to_probablility])
+    goto_counters = np.random.randint(low=1, high=5, size=instruction_num, dtype=int)*goto_utilised 
+    goto_counters[0] = 0 #Dont make the first address loop to itself
+
+    max_loopback_distance = 10    
+    goto_addresses = [np.random.randint(max(0, ram_address-max_loopback_distance), ram_address, size=1)[0] for ram_address in range(1, instruction_num)]
+    goto_addresses.insert(0, 0)
+
+    for ram_address, (duration, goto_address, goto_counter) in enumerate(zip(durations, goto_addresses, goto_counters)):
+        if ram_address == instruction_num-1:
+            state = np.zeros(24, dtype=np.int)   #just makes them all go low in theyre final state (helps with triggering off a single pulse)
         else:
             state = np.random.randint(0, high=2, size=24, dtype=int)         
         states[ram_address, :] = state
-        instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, state=state, duration=duration))
+        instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, state=state, duration=duration, goto_address=goto_address, goto_counter=goto_counter))
 
     pg.write_instructions(instructions)
     pg.write_device_options(final_ram_address=ram_address, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
 
+    # This is all I had to add to incorporate the pulsegen emulator. But if i want it to do anything, I need to add goto's and goto counters
+    decoded_instructions = decode_instructions(instructions)
+    durations, states = simulate_output_coordinator(decoded_instructions)
+
     return durations, states
+
+#####################################################################################################################
+'''This stuff generates the full pulse sequence taking into account goto's. Ultimately the output format is identical'''
+def decode_instruction_bytes(instruction):
+    identifier, =   struct.unpack('B', instruction[0:1])
+    address, =      struct.unpack('<Q', instruction[1:3] + bytes(6))
+    state =         np.unpackbits(np.array([instruction[3], instruction[4], instruction[5]], dtype=np.uint8), bitorder='little')
+    duration, =     struct.unpack('<Q', instruction[6:12] + bytes(2))
+    goto_address, = struct.unpack('<Q', instruction[12:14] + bytes(6))
+    goto_counter, = struct.unpack('<Q', instruction[14:18] + bytes(4))
+    tags, =         struct.unpack('<Q', instruction[18:19] + bytes(7))
+    stop_and_wait =     bool((tags >> 0) & 0b1)
+    hard_trig_out =     bool((tags >> 1) & 0b1)
+    notify_computer =   bool((tags >> 2) & 0b1)
+    powerline_sync =    bool((tags >> 3) & 0b1)
+    # return {'identifier':identifier, 'address':address, 'state':state, 'duration':duration, 'goto_address':goto_address, 'goto_counter':goto_counter, 'stop_and_wait':stop_and_wait, 'hardware_trig_out':hard_trig_out, 'notify_computer':notify_computer, 'powerline_sync':powerline_sync}
+    #These are the only needed bits
+    return {'address':address, 'state':state, 'duration':duration, 'goto_address':goto_address, 'goto_counter_original':goto_counter, 'goto_counter':goto_counter}
+
+
+def decode_instructions(instructions):
+    if type(instructions) is bytes:
+        decoded_instructions = [decode_instruction_bytes(instructions[i:i+19]) for i in range(0, len(instructions), 19)]
+    elif isinstance(instructions, (list, tuple, np.ndarray)):
+        decoded_instructions = [decode_instruction_bytes(instruction) for instruction in instructions]
+    #sort them by address, and return
+    return sorted(decoded_instructions, key = lambda i: i['address']) #This is a list of the instruction dictonaries
+
+def simulate_output_coordinator(instructions):
+    # It is assumed that the final ram address is the last address in the list (of sorted dictionary instructions)
+    final_address = len(instructions)-1
+    # addresses = []
+    states = []
+    durations = []
+    address = 0
+    while True:
+        instruction = instructions[address]
+        # addresses.append(address)
+        states.append(instruction['state'])
+        durations.append(instruction['duration'])
+        if instruction['goto_counter'] == 0:
+            instruction['goto_counter'] = instruction['goto_counter_original']
+            if address == final_address:
+                break
+            address += 1
+        else:
+            instruction['goto_counter'] -= 1
+            address = instruction['goto_address']
+    # print(addresses)
+    return np.array(durations, dtype=np.int), np.array(states, dtype=np.int)
+#####################################################################################################################
+
+
 
 if __name__ == "__main__":
     scope = rigol_ds1202z_e.RigolScope()
     # scope.default_setup(Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
-    # setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
+    setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
 
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial()
     # pg.write_action(reset_output_coordinator=True) 
 
-    for trial in range(50):
+    for trial in range(1):
         print(f'Trial {trial}')
         scope.write(':SINGLE')  #Once setup has been done once, you can just re-aquire with same settings. It is faster.
 
-        # simple_sequence(pg)
-        # # software_trig(pg)
         durations, states = random_sequence(pg, seed=trial)
         pg.write_action(trigger_now=True)
         pg.read_all_messages(timeout=0.1)
-        # print(pg.get_state())
+
 
         # Obtain the data from the scope
         time.sleep(0.1)
@@ -183,13 +247,13 @@ if __name__ == "__main__":
         rise_tdata = np.array(rise_tdata)
         fall_tdata = np.array(fall_tdata)
 
-        # # Plot the time domain signal of the simulated and obtained signals
-        # plot(t*1E6, V, label='ch0')
-        # plot(tsim*1E6, Vsim, label='ch0 sim')
-        # xlabel('time (μs)')
-        # ylabel('output (V)')
-        # legend()
-        # show()
+        # Plot the time domain signal of the simulated and obtained signals
+        plot(t*1E6, V, label='ch0')
+        plot(tsim*1E6, Vsim, label='ch0 sim')
+        xlabel('time (μs)')
+        ylabel('output (V)')
+        legend()
+        show()
 
         # is there the same number of rise and fall times in the data as in the sim? If not, there are big problems, and the remaining analysis wont work
         print(f'No. rising transitions (sim/actual): {rise_tsim.size}/{rise_tdata.size}')

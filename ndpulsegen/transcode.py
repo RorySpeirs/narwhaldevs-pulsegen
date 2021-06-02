@@ -243,7 +243,7 @@ def encode_instruction(address=0, state=0, duration=1, goto_address=0, goto_coun
     instruction_duration:       6 bytes [5:11]  48 bits     [40+:48]    unsigned int.
     goto_address:               2 bytes [11:13] 16 bits     [88+:16]    unsigned int.
     goto_counter:               4 bytes [13:17] 32 bits     [104+:32]   unsigned int.
-    tags:                       1 byte  [17]    3 bits      [136+:3]    unsigned int.
+    tags:                       1 byte  [17]    4 bits      [136+:4]    unsigned int.
         stop_and_wait                           1 bit       [136]   
         hardware_trigger_out                    1 bits      [137] 
         notify_instruction_activated            1 bit       [138]
