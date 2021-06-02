@@ -178,26 +178,35 @@ def simulate_output_coordinator(instructions):
 if __name__ == "__main__":
     scope = rigol_ds1202z_e.RigolScope()
     # scope.default_setup(Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
-    setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
+    setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=250E-9)
 
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial()
     # pg.write_action(reset_output_coordinator=True) 
 
-    for trial in range(1):
+    for trial in range(10):
         print(f'Trial {trial}')
         scope.write(':SINGLE')  #Once setup has been done once, you can just re-aquire with same settings. It is faster.
 
+        print('Generating sequence...')
         durations, states = random_sequence(pg, seed=trial)
+        sequence_duration = durations.sum()*10E-9
+        print('Sequence duration = {}ms'.format(sequence_duration*1E3))
+        if sequence_duration >= 24E-3 - 500E-9: #I want 250ns at the start and end
+            print(f'Sequence too long. Skipping trial {trial}')
+            continue
+
         pg.write_action(trigger_now=True)
         pg.read_all_messages(timeout=0.1)
 
 
         # Obtain the data from the scope
         time.sleep(0.1)
-        t, V = scope.read_data(channel=1, duration=210E-6)
+        print('Reading data from scope...')
+        t, V = scope.read_data(channel=1, duration=sequence_duration+500E-9)
         t = t - t[np.argmax(V > 0.6)]   # Zeros the time on the first transition. Be careful, this may have some thresholding impact?
 
+        print('Finding simulated transition times...')
         # Simulate what the pulse sequence should be
         chan = 0    #Select the Channel of the Pulse generator you are looking at
         dt = 1E-10
@@ -212,6 +221,7 @@ if __name__ == "__main__":
             Vsim.append(state)
         tsim = np.array(tsim)
         Vsim = np.array(Vsim)*2+0.1
+        tsim = tsim - tsim[np.argmax(Vsim > 0.5)]   # Zeros the time on the first transition. 
         
         # Extract the rise and fall times of the simulated structure. Note, this is different to the duratiosn, because the state doesnt change at each instruction
         rise_tsim = []
@@ -225,6 +235,7 @@ if __name__ == "__main__":
         rise_tsim = np.array(rise_tsim)
         fall_tsim = np.array(fall_tsim)
 
+        print('Finding scope data transition times...')
         # Extract the rise and fall times of the scope data. I do a linear interpolation to find the crossing time.
         threshold = 0.3 # Good to set a low threshold because I am looking for those runty skinny spikes that might possibly appear. But it does make the jitter appear bigger than the actual value.
         # threshold = 1.1
@@ -247,13 +258,19 @@ if __name__ == "__main__":
         rise_tdata = np.array(rise_tdata)
         fall_tdata = np.array(fall_tdata)
 
-        # Plot the time domain signal of the simulated and obtained signals
-        plot(t*1E6, V, label='ch0')
-        plot(tsim*1E6, Vsim, label='ch0 sim')
-        xlabel('time (μs)')
-        ylabel('output (V)')
-        legend()
-        show()
+        # # Plot the time domain signal of the simulated and obtained signals
+        # min_t = -0.1E-6
+        # max_t = 1E-6
+        # min_idx = np.argmax(t > min_t)
+        # min_idx_sim = np.argmax(tsim > min_t)
+        # max_idx = np.argmax(t > max_t)
+        # max_idx_sim = np.argmax(tsim > max_t)
+        # plot(t[min_idx:max_idx]*1E6, V[min_idx:max_idx], label='ch0')
+        # plot(tsim[min_idx_sim:max_idx_sim]*1E6, Vsim[min_idx_sim:max_idx_sim], label='ch0 sim')
+        # xlabel('time (μs)')
+        # ylabel('output (V)')
+        # legend()
+        # show()
 
         # is there the same number of rise and fall times in the data as in the sim? If not, there are big problems, and the remaining analysis wont work
         print(f'No. rising transitions (sim/actual): {rise_tsim.size}/{rise_tdata.size}')
@@ -261,23 +278,24 @@ if __name__ == "__main__":
 
         rise_error = rise_tsim - rise_tdata
         fall_error = fall_tsim - fall_tdata
-        # Now remove the linear trend, since that just indicates an offset in the clocks of the Pulse generator and scope, which would be fixed if the scope had a sync in/out
-        m_rise, c_rise = np.polyfit(rise_tsim, rise_error, 1)
-        rise_error_residuals = rise_error - (m_rise*rise_tsim + c_rise)
-        m_fall, c_fall = np.polyfit(fall_tsim, fall_error, 1)
-        fall_error_residuals = fall_error - (m_fall*fall_tsim + c_fall)
+        # Now remove the overall trend, since that just indicates an offset in the clocks of the Pulse generator and scope, which would be fixed if the scope had a sync in/out
+        polynomial_order = 1
+        p_rise = np.polyfit(rise_tsim, rise_error, polynomial_order)
+        rise_error_residuals = rise_error - np.polyval(p_rise, rise_tsim)
+        p_fall = np.polyfit(fall_tsim, fall_error, polynomial_order)
+        fall_error_residuals = fall_error - np.polyval(p_fall, fall_tsim)
 
         # print('Rise time jitter (std)= {}ps'.format(round(np.std(rise_error_residuals)*1E12)))
         # print('Fall time jitter (std)= {}ps'.format(round(np.std(fall_error_residuals)*1E12)))
         # Standard deviation and RMS are identical under these conditions. Trust me, I checked.
         print('Rise time jitter (RMS)={}ps. (Max)={}ps'.format(round(np.sqrt(np.mean(rise_error_residuals**2))*1E12), round(np.max(np.abs(rise_error_residuals))*1E12)))
         print('Fall time jitter (RMS)={}ps. (Max)={}ps'.format(round(np.sqrt(np.mean(fall_error_residuals**2))*1E12), round(np.max(np.abs(fall_error_residuals))*1E12)))
-        if np.any(np.abs(rise_error_residuals) > 0.7E-9):
-            print(f'Problem: a rise error is too big')
-            break
-        if np.any(np.abs(fall_error_residuals) > 0.8E-9):
-            print(f'Problem: a fall error is too big')
-            break
+        # if np.any(np.abs(rise_error_residuals) > 0.7E-9):
+        #     print(f'Problem: a rise error is too big')
+        #     break
+        # if np.any(np.abs(fall_error_residuals) > 0.8E-9):
+        #     print(f'Problem: a fall error is too big')
+        #     break
 
         # plot(rise_tsim*1E6, rise_error*1E9, 'C0', label='rising edge')
         # plot(fall_tsim*1E6, fall_error*1E9, 'C1', label='falling edge')
