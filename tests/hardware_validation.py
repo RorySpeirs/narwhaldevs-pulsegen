@@ -203,37 +203,43 @@ def find_transition_times_data(V, t, threshold = 0.3):
             N_fall += 1
     return rise_tdata[:N_rise], fall_tdata[:N_fall]
 
-# def find_transition_times_sim(durations, states, pulsegen_chan):
-#     print('Finding simulated transition times...')
-#     # Simulate what the pulse sequence should be
-#     dt = 1E-10
-#     tsim = np.zeros(durations.size*2+1)
-#     Vsim = np.zeros(durations.size*2+1)
-#     tsim[0] = -dt
-#     Vsim[0] = 0
-#     # Up to here
-#     tcum = 0
-#     for duration, state in zip(durations, states[:, pulsegen_chan]):
-#         tsim.append(tcum + dt)
-#         Vsim.append(state)
-#         tcum += duration*10E-9
-#         tsim.append(tcum - dt)
-#         Vsim.append(state)
-#     tsim = np.array(tsim)
-#     Vsim = np.array(Vsim)*2+0.1
-#     tsim = tsim - tsim[np.argmax(Vsim > 0.5)]   # Zeros the time on the first transition. 
-    
-#     # Extract the rise and fall times of the simulated structure. Note, this is different to the duratiosn, because the state doesnt change at each instruction
-#     rise_tsim = []
-#     fall_tsim = []
-#     for Va, Vb, ta, tb in zip(Vsim[:-1], Vsim[1:], tsim[:-1], tsim[1:]):
-#         if Vb > Va:
-#             rise_tsim.append((ta+tb)/2)
-#         if Vb < Va:
-#             fall_tsim.append((ta+tb)/2)
+@jit(nopython=True, cache=True)
+def find_transition_times_sim(durations, states, pulsegen_chan):
+    # Simulate what the pulse sequence should be
+    dt = 1E-10
+    tsim = np.zeros(durations.size*2+1)
+    Vsim = np.zeros(durations.size*2+1)
+    tsim[0] = -dt
+    Vsim[0] = 0
+    tcum = 0
+    idx = 0
+    for idx in range(durations.size):
+        state = states[idx, pulsegen_chan]
+        tsim[2*idx+1] = tcum + dt
+        Vsim[2*idx+1] = state
+        tcum += durations[idx]*10E-9
+        tsim[2*idx+2] = tcum - dt
+        Vsim[2*idx+2] = state
+    Vsim = Vsim*2 + 0.1 # for display purposes
+    tsim = tsim - tsim[np.argmax(Vsim > 0.5)]   # Zeros the time on the first transition. 
+    # Extract the rise and fall times of the simulated structure. Note, this is different to the duratiosn, because the state doesnt change at each instruction
+    N_rise = 0
+    N_fall = 0
+    rise_tsim = np.zeros(durations.size)
+    fall_tsim = np.zeros(durations.size)
+    for idx in range(tsim.size-1):
+        Va = Vsim[idx]
+        Vb = Vsim[idx+1]
+        ta = tsim[idx]
+        tb = tsim[idx + 1]
+        if Vb > Va:
+            N_rise += 1
+            rise_tsim[N_rise - 1] = (ta+tb)/2
+        if Vb < Va:
+            N_fall += 1
+            fall_tsim[N_fall - 1] = (ta+tb)/2
+    return Vsim, tsim, rise_tsim[:N_rise], fall_tsim[:N_fall]
 
-#     rise_tsim = np.array(rise_tsim)
-#     fall_tsim = np.array(fall_tsim)
 
 
 
@@ -242,8 +248,8 @@ if __name__ == "__main__":
     # scope.default_setup(Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
 
     # setup_scope(scope, Ch1=False, Ch2=True, pre_trig_record=10E-6)
-    # setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=10E-6)
-    setup_scope(scope, Ch1=True, Ch2=True, pre_trig_record=10E-6)
+    setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=10E-6)
+    # setup_scope(scope, Ch1=True, Ch2=True, pre_trig_record=10E-6)
 
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial()
@@ -253,22 +259,27 @@ if __name__ == "__main__":
 
     '''Transition number errors
     Pulse_gen_chan  random_seed
-    11              5486
-    3               871
-
+    11              5486    Very strong glitch
+    3               871     
+    7               865     
+    20              865     Very weak glitch
+    21              870     
     '''
-    scope_channels = [1, 2]
-    pulsegen_channels = [2, 3]
-    # scope_channels = [2]
-    # pulsegen_channels = [3]
+    # scope_channels = [1, 2]
+    # pulsegen_channels = [22, 23]
+    scope_channels = [1]
+    pulsegen_channels = [11]
 
 
     transition_number_errors = 0
     pulse_timing_errors = 0
-    # for trial, rand_seed in enumerate([871]):
-    seed_salt = 865
-    for trial in range(10):
-        rand_seed = trial+seed_salt
+
+    for trial, rand_seed in enumerate([5486]):
+
+    # seed_salt = 865
+    # for trial in range(10):
+    #     rand_seed = trial+seed_salt
+
         print(f'Trial {trial}')
         scope.write(':SINGLE')  #Once setup has been done once, you can just re-aquire with same settings. It is faster.
 
@@ -290,35 +301,8 @@ if __name__ == "__main__":
             t, V = scope.read_data(channel=scope_chan, duration=sequence_duration+10.25E-6)
             t = t - t[np.argmax(V > 0.6)]   # Zeros the time on the first transition. Be careful, this may have some thresholding impact?
 
-            print('Finding simulated transition times...')
-            # Simulate what the pulse sequence should be
-            dt = 1E-10
-            tsim = [-dt]
-            Vsim = [0]
-            tcum = 0
-            for duration, state in zip(durations, states[:, pulsegen_chan]):
-                tsim.append(tcum + dt)
-                Vsim.append(state)
-                tcum += duration*10E-9
-                tsim.append(tcum - dt)
-                Vsim.append(state)
-            tsim = np.array(tsim)
-            Vsim = np.array(Vsim)*2+0.1
-            tsim = tsim - tsim[np.argmax(Vsim > 0.5)]   # Zeros the time on the first transition. 
-            
-            # Extract the rise and fall times of the simulated structure. Note, this is different to the duratiosn, because the state doesnt change at each instruction
-            rise_tsim = []
-            fall_tsim = []
-            for Va, Vb, ta, tb in zip(Vsim[:-1], Vsim[1:], tsim[:-1], tsim[1:]):
-                if Vb > Va:
-                    rise_tsim.append((ta+tb)/2)
-                if Vb < Va:
-                    fall_tsim.append((ta+tb)/2)
 
-            rise_tsim = np.array(rise_tsim)
-            fall_tsim = np.array(fall_tsim)
-
-            print('Finding scope data transition times...')
+            Vsim, tsim, rise_tsim, fall_tsim = find_transition_times_sim(durations, states, pulsegen_chan)
             # Extract the rise and fall times of the scope data. I do a linear interpolation to find the crossing time.
             # Good to set a low threshold because I am looking for those runty skinny spikes that might possibly appear. But it does make the jitter appear bigger than the actual value.
             rise_tdata, fall_tdata = find_transition_times_data(V, t, threshold = 0.3)
@@ -348,6 +332,7 @@ if __name__ == "__main__":
                 last_err = 0
                 list_size = min((rise_tsim.size, rise_tdata.size))
                 sim_idx, data_idx = 0, 0
+                num_faults = 0
                 print('Transition errors at following times:')
                 while sim_idx < list_size:
                     t_sim = rise_tsim[sim_idx]
@@ -356,10 +341,13 @@ if __name__ == "__main__":
                 # for t_sim, t_data in zip(rise_tsim[:list_size], rise_tdata[:list_size]):
                     err = t_data - t_sim
                     if abs(err - last_err) > 3E-9:
-                        print(t_data)
                         data_idx += 1
-                        if data_idx > 50:
-                            print('too many errors, ending program')
+                        if num_faults == 0:
+                            first_fault_time = t_data
+                        print('transition error at {:.3f}μs'.format(t_data*1E6))
+                        num_faults += 1
+                        if num_faults > 50:
+                            print('Too many faults')
                             break
                     else:
                         last_err = err
@@ -368,7 +356,8 @@ if __name__ == "__main__":
 
                 ''' Remember, even if this really is some stability problem in the FPGA, maybe you can fix it. For example, pipline all the outputs.'''
    
-                t_plot_centre = 0.001752345439938187
+                t_plot_centre = first_fault_time
+
                 t_plot_range = 100E-6
                 min_t = t_plot_centre - t_plot_range/2
                 max_t = t_plot_centre + t_plot_range/2
