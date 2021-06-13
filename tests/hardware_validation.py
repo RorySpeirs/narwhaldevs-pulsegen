@@ -98,12 +98,13 @@ def random_sequence(pg, seed=19870909):
     states = np.empty((instruction_num, 24), dtype=np.int)
     instructions = []
     # durations = 1 + np.random.poisson(lam=1, size=instruction_num)
-    durations = np.random.randint(1, high=5, size=instruction_num, dtype=int)  
+    # durations = np.random.randint(1, high=5, size=instruction_num, dtype=int)  
+    durations = 1+np.round(np.random.f(3, 2, instruction_num)).astype(np.int)
 
     # I want a low probablility that any given instruction actually does loop back to an earlier address, but if it does, I want it to do it more than just once ()
     go_to_probablility = 0.1
     goto_utilised = np.random.choice(a=[1, 0], size=instruction_num, p=[go_to_probablility, 1-go_to_probablility])
-    goto_counters = np.random.randint(low=1, high=5, size=instruction_num, dtype=int)*goto_utilised 
+    goto_counters = np.random.randint(low=1, high=4, size=instruction_num, dtype=int)*goto_utilised 
     goto_counters[0] = 0 #Dont make the first address loop to itself
 
     max_loopback_distance = 10    
@@ -128,7 +129,7 @@ def random_sequence(pg, seed=19870909):
     return durations, states
 
 #####################################################################################################################
-'''This stuff generates the full pulse sequence taking into account goto's. Ultimately the output format is identical'''
+'''This stuff generates the full pulse sequence taking into account goto's.'''
 def decode_instruction_bytes(instruction):
     identifier, =   struct.unpack('B', instruction[0:1])
     address, =      struct.unpack('<Q', instruction[1:3] + bytes(6))
@@ -265,20 +266,25 @@ if __name__ == "__main__":
     20              865     Very weak glitch
     21              870     
     '''
-    # scope_channels = [1, 2]
-    # pulsegen_channels = [22, 23]
+    scope_channels = [1, 2]
+    pulsegen_channels = [0, 1]
     scope_channels = [1]
-    pulsegen_channels = [11]
+    pulsegen_channels = [0]
 
 
     transition_number_errors = 0
     pulse_timing_errors = 0
 
-    for trial, rand_seed in enumerate([5486]):
+    # for trial, rand_seed in enumerate([870]):
 
-    # seed_salt = 865
-    # for trial in range(10):
-    #     rand_seed = trial+seed_salt
+    seed_salt = 651664
+    # seed_salt = 651
+    incrementing_seed = 0
+    trial = 0
+    # for trial in range(11):
+    while trial < 10:
+        rand_seed = incrementing_seed+seed_salt
+        incrementing_seed += 1
 
         print(f'Trial {trial}')
         scope.write(':SINGLE')  #Once setup has been done once, you can just re-aquire with same settings. It is faster.
@@ -286,10 +292,13 @@ if __name__ == "__main__":
         print('Generating sequence...')
         durations, states = random_sequence(pg, seed=rand_seed)
         sequence_duration = durations.sum()*10E-9
-        print('Sequence duration = {}ms'.format(sequence_duration*1E3))
+        
+        
         if sequence_duration >= 24E-3 - 10.250E-6: #I want 1us at the start at the start and 250ns end
-            print(f'Sequence too long. Skipping trial {trial}')
+            print(f'Sequence too long: {sequence_duration*1E3}ms. Skipping incrementing_seed {incrementing_seed}')
             continue
+        trial += 1
+        print('Sequence duration = {}ms'.format(sequence_duration*1E3))
 
         pg.write_action(trigger_now=True)
         pg.read_all_messages(timeout=0.1)
@@ -372,6 +381,21 @@ if __name__ == "__main__":
                 legend()
                 show()
             
+            # # just plot to have a look if you want.
+            # t_plot_centre = 1.5E-3
+            # t_plot_range = 100E-6
+            # min_t = t_plot_centre - t_plot_range/2
+            # max_t = t_plot_centre + t_plot_range/2
+            # min_idx = np.argmax(t > min_t)
+            # min_idx_sim = np.argmax(tsim > min_t)
+            # max_idx = np.argmax(t > max_t)
+            # max_idx_sim = np.argmax(tsim > max_t)
+            # plot(t[min_idx:max_idx]*1E6, V[min_idx:max_idx], label='scope data')
+            # plot(tsim[min_idx_sim:max_idx_sim]*1E6, Vsim[min_idx_sim:max_idx_sim], label='sim')
+            # xlabel('time (μs)')
+            # ylabel('output (V)')
+            # legend()
+            # show()
 
             if not transition_number_error:
                 rise_error = rise_tsim - rise_tdata
