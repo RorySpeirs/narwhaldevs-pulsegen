@@ -65,21 +65,49 @@ def print_bytes(bytemessage):
         print('{:08b}'.format(letter), end =" ")
     print('')
 
+def check_disable_after_current_run(pg):
+    #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
+    instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,[0, 0],1,0,0, False, False, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    # print(pg.get_state())
+
+    pg.write_action(trigger_now=True)
+    # print(pg.get_state())
+
+    # time.sleep(3)
+    print('Press Esc. key to stop looping.')
+    kb = ndpulsegen.console_read.KBHit()
+    while True:
+        if kb.kbhit():
+            if ord(kb.getch()) == 27:
+                break   
+    kb.set_normal_term()
+    print('Looping stopped.')
+    pg.write_action(disable_after_current_run=True)
+    # pg.write_action(disable_after_current_run=True)
+    # Ok, with two disables_after current run, the next trig doesnt make it run continuously.
+    # So i need to make the device ignore disabel after current run if it isnt currently running!
 
 if __name__ == "__main__":
 
     usb_port ='COM6'
     # usb_port ='tty.usbserial-FT3KRFFN0'
     pg = ndpulsegen.PulseGenerator(usb_port)
-    pg.connect()
+    assert pg.connect_serial()
 
+    check_disable_after_current_run(pg)
+    # echo_terminal_characters(pg)
+    # cause_invalid_receive(pg)
+    # cause_timeout_on_receive(pg)
+    # cause_timeout_on_message_forward(pg)
 
-    echo_terminal_characters(pg)
-    cause_invalid_receive(pg)
-    cause_timeout_on_receive(pg)
-    cause_timeout_on_message_forward(pg)
-
-    instruction = ndpulsegen.transcode.encode_instruction(address=8191, state = np.zeros(24), duration=2**48-1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=True)
-    print_bytes(instruction)
+    # instruction = ndpulsegen.transcode.encode_instruction(address=8191, state = np.zeros(24), duration=2**48-1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=True)
+    # print_bytes(instruction)
 
 
