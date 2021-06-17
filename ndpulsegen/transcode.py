@@ -1,4 +1,4 @@
- import numpy as np
+import numpy as np
 import struct
 
 #########################################################
@@ -128,48 +128,6 @@ def encode_echo(byte_to_echo):
     message_identifier = struct.pack('B', msgout_identifier['echo'])
     return message_identifier + byte_to_echo
 
-def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None):
-    ''' Messageout identifier:  1 byte: 154
-    Message format:                             BITS USED   FPGA INDEX.
-    final_RAM_address:          2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
-    trigger_time:               7 bytes [2:9]   56 bits     [16+:56]    unsigned int.
-    trigger_length:             1 byte  [9]     8 bits      [72+:8]     unsigned int.
-    
-    tags:                       2 byte  [10:12] 10 bits     [80+:10]    unsigned int.
-        run_mode                                2 bit       [80+:2]     [80]: run mode, [81]:update flag
-        trigger_mode                            3 bits      [82+:3]     [82+:2]: trig mode, [84]:update flag
-        trigger_notification_enable             2 bit       [85+:2]     [85]: trig notif, [86]:update flag
-        update_flag:final_RAM_address           1 bit       [87]
-        update_flag:trigger_time                1 bit       [88]
-        update_flag:trigger_length              1 bit       [89]
-    '''
-    run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
-    trigger_mode_tag =              encode_lookup['trigger_mode'][trigger_mode] << 2
-    notify_on_main_trig_tag =       encode_lookup['notify_on_trig'][notify_on_main_trig] << 5
-    if final_ram_address is None:   
-        final_ram_address = 0
-        update_final_ram_address_tag = 0
-    else:
-        update_final_ram_address_tag = 1 << 7
-    if trigger_time is None:        
-        trigger_time = 0
-        update_trigger_time_tag = 0
-    else:
-        update_trigger_time_tag = 1 << 8
-    if trigger_length is None:      
-        trigger_length = 0
-        update_trigger_length_tag = 0
-    else:
-        update_trigger_length_tag = 1 << 9
-
-    tags = run_mode_tag | trigger_mode_tag | notify_on_main_trig_tag | update_final_ram_address_tag | update_trigger_time_tag | update_trigger_length_tag
-    message_identifier =    struct.pack('B', msgout_identifier['device_options'])
-    final_ram_address =     struct.pack('<Q', final_ram_address)[:2]
-    trigger_time =          struct.pack('<Q', trigger_time)[:7]
-    trigger_length =        struct.pack('<Q', trigger_length)[:1]
-    tags =                  struct.pack('<Q', tags)[:2]
-    return message_identifier + final_ram_address + trigger_time + trigger_length + tags
-
 def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigger_delay=None):
     ''' Messageout identifier:  1 byte: 156
     Message format:                             BITS USED   FPGA INDEX.
@@ -191,26 +149,136 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     tags =                      struct.pack('<Q', tags)[:1]
     return message_identifier + powerline_trigger_delay + tags
 
-def encode_action(software_run_enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
+
+# def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None):
+#     ''' Messageout identifier:  1 byte: 154
+#     Message format:                             BITS USED   FPGA INDEX.
+#     final_RAM_address:          2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
+#     trigger_time:               7 bytes [2:9]   56 bits     [16+:56]    unsigned int.
+#     trigger_length:             1 byte  [9]     8 bits      [72+:8]     unsigned int.
+    
+#     tags:                       2 byte  [10:12] 10 bits     [80+:10]    unsigned int.
+#         run_mode                                2 bit       [80+:2]     [80]: run mode, [81]:update flag
+#         trigger_mode                            3 bits      [82+:3]     [82+:2]: trig mode, [84]:update flag
+#         trigger_notification_enable             2 bit       [85+:2]     [85]: trig notif, [86]:update flag
+#         update_flag:final_RAM_address           1 bit       [87]
+#         update_flag:trigger_time                1 bit       [88]
+#         update_flag:trigger_length              1 bit       [89]
+#     '''
+#     run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
+#     trigger_mode_tag =              encode_lookup['trigger_mode'][trigger_mode] << 2
+#     notify_on_main_trig_tag =       encode_lookup['notify_on_trig'][notify_on_main_trig] << 5
+#     if final_ram_address is None:   
+#         final_ram_address = 0
+#         update_final_ram_address_tag = 0
+#     else:
+#         update_final_ram_address_tag = 1 << 7
+#     if trigger_time is None:        
+#         trigger_time = 0
+#         update_trigger_time_tag = 0
+#     else:
+#         update_trigger_time_tag = 1 << 8
+#     if trigger_length is None:      
+#         trigger_length = 0
+#         update_trigger_length_tag = 0
+#     else:
+#         update_trigger_length_tag = 1 << 9
+
+#     tags = run_mode_tag | trigger_mode_tag | notify_on_main_trig_tag | update_final_ram_address_tag | update_trigger_time_tag | update_trigger_length_tag
+#     message_identifier =    struct.pack('B', msgout_identifier['device_options'])
+#     final_ram_address =     struct.pack('<Q', final_ram_address)[:2]
+#     trigger_time =          struct.pack('<Q', trigger_time)[:7]
+#     trigger_length =        struct.pack('<Q', trigger_length)[:1]
+#     tags =                  struct.pack('<Q', tags)[:2]
+#     return message_identifier + final_ram_address + trigger_time + trigger_length + tags
+
+def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None, software_run_enable=None, notify_when_run_finished=None):
+    ''' Messageout identifier:  1 byte: 154
+    Message format:                             BITS USED   FPGA INDEX.
+    final_RAM_address:          2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
+    trigger_time:               7 bytes [2:9]   56 bits     [16+:56]    unsigned int.
+    trigger_length:             1 byte  [9]     8 bits      [72+:8]     unsigned int.
+    
+    tags:                       2 byte  [10:12] 14 bits     [80+:14]    unsigned int.
+        run_mode                                2 bit       [80+:2]     [80]: run mode, [81]:update flag
+        trigger_mode                            3 bits      [82+:3]     [82+:2]: trig mode, [84]:update flag
+        trigger_notification_enable             2 bit       [85+:2]     [85]: trig notif, [86]:update flag
+        update_flag:final_RAM_address           1 bit       [87]
+        update_flag:trigger_time                1 bit       [88]
+        update_flag:trigger_length              1 bit       [89]
+        software_run_enable                     2 bit       [90+:2]     [90]: software_run_enable, [91]:update flag
+        notify_when_run_finished                2 bit       [92+:2]     [92]: notify_when_run_finished, [93]:update flag
+    '''
+    run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
+    trigger_mode_tag =              encode_lookup['trigger_mode'][trigger_mode] << 2
+    notify_on_main_trig_tag =       encode_lookup['notify_on_trig'][notify_on_main_trig] << 5
+    software_run_enable_tag =       encode_lookup['software_run_enable'][software_run_enable] << 7
+    notify_when_run_finished_tag =  encode_lookup['notify_when_finished'][notify_when_run_finished] << 9
+
+    if final_ram_address is None:   
+        final_ram_address = 0
+        update_final_ram_address_tag = 0
+    else:
+        update_final_ram_address_tag = 1 << 7
+    if trigger_time is None:        
+        trigger_time = 0
+        update_trigger_time_tag = 0
+    else:
+        update_trigger_time_tag = 1 << 8
+    if trigger_length is None:      
+        trigger_length = 0
+        update_trigger_length_tag = 0
+    else:
+        update_trigger_length_tag = 1 << 9
+
+    tags = run_mode_tag | trigger_mode_tag | notify_on_main_trig_tag | update_final_ram_address_tag | update_trigger_time_tag | update_trigger_length_tag | software_run_enable_tag | notify_when_run_finished_tag
+    message_identifier =    struct.pack('B', msgout_identifier['device_options'])
+    final_ram_address =     struct.pack('<Q', final_ram_address)[:2]
+    trigger_time =          struct.pack('<Q', trigger_time)[:7]
+    trigger_length =        struct.pack('<Q', trigger_length)[:1]
+    tags =                  struct.pack('<Q', tags)[:2]
+    return message_identifier + final_ram_address + trigger_time + trigger_length + tags
+
+# def encode_action(software_run_enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
+#     ''' Messageout identifier:  1 byte: 152
+#     Message format:                             BITS USED   FPGA INDEX.
+#     tags:                       1 byte  [0]     8 bits      [0+:8]    
+#         software_run_enable                     2 bits      [0+:2]      bit[1] indicates if "software_run_enable" is to be modified. bit[0] is the actual enable setting, it is ignored it bit[0] = 0   
+#         trigger_now                             1 bit       [2] 
+#         request_state                           1 bit       [3]
+#         reset_outpoot_coordinator               1 bit       [4] 
+#         disable_after_current_run               1 bit       [5] 
+#         notify_when_current_run_finished        1 bit       [6]
+#         request_powerline_state                 1 bit       [7]
+#     '''
+#     software_run_enable_tag =                        encode_lookup['software_run_enable'][software_run_enable] << 0
+#     trigger_now_tag =                   encode_lookup['trigger_now'][trigger_now] << 2
+#     request_state_tag =                 encode_lookup['request_state'][request_state] << 3
+#     reset_output_coordinator_tag =      encode_lookup['reset_output_coordinator'][reset_output_coordinator] << 4
+#     disable_after_current_run =         encode_lookup['disable_after_current_run'][disable_after_current_run] << 5
+#     notify_when_current_run_finished =  encode_lookup['notify_when_finished'][notify_when_current_run_finished] << 6
+#     request_powerline_state_tag =       encode_lookup['request_powerline_state'][request_powerline_state] << 7
+#     tags = software_run_enable_tag | trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | notify_when_current_run_finished | request_powerline_state_tag
+#     message_identifier =    struct.pack('B', msgout_identifier['action_request'])
+#     tags =                  struct.pack('<Q', tags)[:1]
+#     return message_identifier + tags
+
+def encode_action(trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, request_powerline_state=False):
     ''' Messageout identifier:  1 byte: 152
     Message format:                             BITS USED   FPGA INDEX.
-    tags:                       1 byte  [0]     8 bits      [0+:8]    
-        software_run_enable                     2 bits      [0+:2]      bit[1] indicates if "software_run_enable" is to be modified. bit[0] is the actual enable setting, it is ignored it bit[0] = 0   
-        trigger_now                             1 bit       [2] 
-        request_state                           1 bit       [3]
+    tags:                       1 byte  [0]     5 bits      [0+:5]    
+        trigger_now                             1 bit       [0] 
+        request_state                           1 bit       [1]
+        request_powerline_state                 1 bit       [2]
+        disable_after_current_run               1 bit       [3]
         reset_outpoot_coordinator               1 bit       [4] 
-        disable_after_current_run               1 bit       [5] 
-        notify_when_current_run_finished        1 bit       [6]
-        request_powerline_state                 1 bit       [7]
     '''
-    software_run_enable_tag =                        encode_lookup['software_run_enable'][software_run_enable] << 0
-    trigger_now_tag =                   encode_lookup['trigger_now'][trigger_now] << 2
-    request_state_tag =                 encode_lookup['request_state'][request_state] << 3
+    trigger_now_tag =                   encode_lookup['trigger_now'][trigger_now] << 0
+    request_state_tag =                 encode_lookup['request_state'][request_state] << 1
+    request_powerline_state_tag =       encode_lookup['request_powerline_state'][request_powerline_state] << 2
+    disable_after_current_run =         encode_lookup['disable_after_current_run'][disable_after_current_run] << 3
     reset_output_coordinator_tag =      encode_lookup['reset_output_coordinator'][reset_output_coordinator] << 4
-    disable_after_current_run =         encode_lookup['disable_after_current_run'][disable_after_current_run] << 5
-    notify_when_current_run_finished =  encode_lookup['notify_when_finished'][notify_when_current_run_finished] << 6
-    request_powerline_state_tag =       encode_lookup['request_powerline_state'][request_powerline_state] << 7
-    tags = software_run_enable_tag | trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | notify_when_current_run_finished | request_powerline_state_tag
+    tags = trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | request_powerline_state_tag
     message_identifier =    struct.pack('B', msgout_identifier['action_request'])
     tags =                  struct.pack('<Q', tags)[:1]
     return message_identifier + tags
@@ -324,7 +392,7 @@ encode_lookup = {
     'request_powerline_state':{True:1, False:0},
     'reset_output_coordinator':{True:1, False:0},
     'disable_after_current_run':{True:1, False:0},
-    'notify_when_finished':{True:1, False:0},
+    'notify_when_finished':{True:0b11, False:0b10, None:0b00},
     'run_mode':{'single':0b10, 'continuous':0b11, None:0b00},
     'trigger_mode':{'software':0b100, 'hardware':0b101, 'either':0b110, None:0b000},
     'notify_on_trig':{True:0b11, False:0b10, None:0b00},
