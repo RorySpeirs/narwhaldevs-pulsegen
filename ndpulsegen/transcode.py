@@ -40,29 +40,33 @@ def decode_devicestate(message):
     final ram address:  2 bytes [3:5]   16 bits     [24+:16]    unsigned int.
     trigger time:       7 bytes [5:12]  56 bits     [40+:56]    unsigned int.
     trigger length:     1 byte  [12]    8 bits      [96+:8]     unsigned int.
-    tags:               1 byte  [13]    6 bits      [104+:6]    unsigned int.
-        run mode                        1 bit       [104]   
-        trigger mode                    2 bit       [105+:2] 
-        notify on main trig             1 bit       [107]   
-        clock source                    1 bit       [108]   
-        running                         1 bit       [109]
-        software run_enable             1 bit       [110]            
-        hardware run_enable             1 bit       [111]
-    current ram address:2 bytes [14:16] 16 bits     [112+:16]   unsigned int.
+    current ram address:2 bytes [13:15] 16 bits     [104+:16]   unsigned int.
+    tags:               2 byte  [15:17] 9 bits      [120+:8]    unsigned int.
+        run mode                        1 bit       [120]   
+        trigger mode                    2 bit       [121+:2] 
+        notify on main trig             1 bit       [123]   
+        clock source                    1 bit       [124]   
+        running                         1 bit       [125]
+        software run_enable             1 bit       [126]            
+        hardware run_enable             1 bit       [127]
+        notify on finished              1 bit       [128]
+    
     '''
     state =                 np.unpackbits(np.array([message[0], message[1], message[2]], dtype=np.uint8), bitorder='little')
     final_ram_address, =    struct.unpack('<Q', message[3:5] + bytes(6))
     trigger_time, =         struct.unpack('<Q', message[5:12] + bytes(1))
     trigger_length, =       struct.unpack('<Q', message[12:13] + bytes(7))
-    tags, =                 struct.unpack('<Q', message[13:14] + bytes(7))
-    current_ram_address, =  struct.unpack('<Q', message[14:16] + bytes(6))
+    current_ram_address, =  struct.unpack('<Q', message[13:15] + bytes(6))
+    tags, =                 struct.unpack('<Q', message[15:17] + bytes(6))
+
     run_mode_tag =              (tags >> 0) & 0b1            
     trigger_mode_tag =          (tags >> 1) & 0b11              
     notify_on_main_trig_tag =   (tags >> 3) & 0b1    
     clock_source_tag =          (tags >> 4) & 0b1  
     running_tag =               (tags >> 5) & 0b1  
     software_run_enable_tag =   (tags >> 6) & 0b1  
-    hardware_run_enable_tag =   (tags >> 7) & 0b1  
+    hardware_run_enable_tag =   (tags >> 7) & 0b1
+    notify_on_run_finished_tag =(tags >> 8) & 0b1    
     run_mode =              decode_lookup['run_mode'][run_mode_tag]
     trigger_mode =          decode_lookup['trigger_mode'][trigger_mode_tag]
     notify_on_main_trig =   decode_lookup['notify_on_main_trig'][notify_on_main_trig_tag]
@@ -70,7 +74,48 @@ def decode_devicestate(message):
     running =               decode_lookup['running'][running_tag]
     software_run_enable =   decode_lookup['software_run_enable'][software_run_enable_tag]
     hardware_run_enable =   decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
-    return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
+    notify_on_run_finished =    decode_lookup['notify_on_run_finished'][notify_on_run_finished_tag]
+    return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'notify_on_run_finished':notify_on_run_finished, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
+
+
+# def decode_devicestate(message):
+#     ''' Messagein identifier:  1 byte: 103
+#     Message format:                     BITS USED   FPGA INDEX.
+#     output state:       3 bytes [0:3]   24 bits     [0+:24]     unsigned int. LSB=output 0
+#     final ram address:  2 bytes [3:5]   16 bits     [24+:16]    unsigned int.
+#     trigger time:       7 bytes [5:12]  56 bits     [40+:56]    unsigned int.
+#     trigger length:     1 byte  [12]    8 bits      [96+:8]     unsigned int.
+#     tags:               1 byte  [13]    8 bits      [104+:8]    unsigned int.
+#         run mode                        1 bit       [104]   
+#         trigger mode                    2 bit       [105+:2] 
+#         notify on main trig             1 bit       [107]   
+#         clock source                    1 bit       [108]   
+#         running                         1 bit       [109]
+#         software run_enable             1 bit       [110]            
+#         hardware run_enable             1 bit       [111]
+#     current ram address:2 bytes [14:16] 16 bits     [112+:16]   unsigned int.
+#     '''
+#     state =                 np.unpackbits(np.array([message[0], message[1], message[2]], dtype=np.uint8), bitorder='little')
+#     final_ram_address, =    struct.unpack('<Q', message[3:5] + bytes(6))
+#     trigger_time, =         struct.unpack('<Q', message[5:12] + bytes(1))
+#     trigger_length, =       struct.unpack('<Q', message[12:13] + bytes(7))
+#     tags, =                 struct.unpack('<Q', message[13:14] + bytes(7))
+#     current_ram_address, =  struct.unpack('<Q', message[14:16] + bytes(6))
+#     run_mode_tag =              (tags >> 0) & 0b1            
+#     trigger_mode_tag =          (tags >> 1) & 0b11              
+#     notify_on_main_trig_tag =   (tags >> 3) & 0b1    
+#     clock_source_tag =          (tags >> 4) & 0b1  
+#     running_tag =               (tags >> 5) & 0b1  
+#     software_run_enable_tag =   (tags >> 6) & 0b1  
+#     hardware_run_enable_tag =   (tags >> 7) & 0b1  
+#     run_mode =              decode_lookup['run_mode'][run_mode_tag]
+#     trigger_mode =          decode_lookup['trigger_mode'][trigger_mode_tag]
+#     notify_on_main_trig =   decode_lookup['notify_on_main_trig'][notify_on_main_trig_tag]
+#     clock_source =          decode_lookup['clock_source'][clock_source_tag]
+#     running =               decode_lookup['running'][running_tag]
+#     software_run_enable =   decode_lookup['software_run_enable'][software_run_enable_tag]
+#     hardware_run_enable =   decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
+#     return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
 
 def decode_powerlinestate(message):
     ''' Messagein identifier:  1 byte: 105
@@ -212,8 +257,8 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=No
     run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
     trigger_mode_tag =              encode_lookup['trigger_mode'][trigger_mode] << 2
     notify_on_main_trig_tag =       encode_lookup['notify_on_trig'][notify_on_main_trig] << 5
-    software_run_enable_tag =       encode_lookup['software_run_enable'][software_run_enable] << 7
-    notify_when_run_finished_tag =  encode_lookup['notify_when_finished'][notify_when_run_finished] << 9
+    software_run_enable_tag =       encode_lookup['software_run_enable'][software_run_enable] << 10
+    notify_when_run_finished_tag =  encode_lookup['notify_when_finished'][notify_when_run_finished] << 12
 
     if final_ram_address is None:   
         final_ram_address = 0
@@ -347,7 +392,7 @@ msgin_decodeinfo = {
     100:{'message_length':3,    'decode_function':decode_internal_error,    'message_type':'error'},
     101:{'message_length':9,    'decode_function':decode_serialecho,        'message_type':'echo'},
     102:{'message_length':9,    'decode_function':decode_easyprint,         'message_type':'print'},
-    103:{'message_length':17,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
+    103:{'message_length':18,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
     104:{'message_length':4,    'decode_function':decode_notification,      'message_type':'notification'},
     105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'}
     }

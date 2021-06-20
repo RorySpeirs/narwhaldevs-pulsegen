@@ -134,10 +134,11 @@ def check_get_state(pg):
     # pg.write_device_options(final_ram_address=7123, run_mode='continuous', trigger_mode='software', trigger_time=987654321, notify_on_main_trig=False, trigger_length=253, software_run_enable=True, notify_when_run_finished=False)
     # pg.write_device_options(final_ram_address=7123, run_mode='continuous', trigger_mode='software', trigger_time=987654321, notify_on_main_trig=False, trigger_length=253, software_run_enable=True, notify_when_run_finished=False)
 
-    print('Software run enable not working !!!!! or not printing out correctly . gotta check it.')
 
-    pg.write_action(request_state=True)
-    pg.read_all_messages(timeout=0.1)
+    # pg.write_action(request_state=True)
+    # pg.write_action(trigger_now=True)
+
+    [print(key,':',value) for key, value in pg.get_state().items()]
 
     # pg.write_action(request_powerline_state=True)
     # pg.read_all_messages(timeout=0.1)
@@ -145,7 +146,7 @@ def check_get_state(pg):
 def check_reset_output_coordinator(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,[0, 0],0,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,[1, 1],0,0,0, False, False, False)
     instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
     instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
     instructions = [instr0, instr1, instr2, instr3]
@@ -153,12 +154,30 @@ def check_reset_output_coordinator(pg):
 
     # this will deliberately get stuck because instruction 1 has a duration of zero, which is not allowed
     pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-    print(pg.get_state())
+    [print(key,':',value) for key, value in pg.get_state().items()]
 
     pg.write_action(trigger_now=True)
-    print(pg.get_state())
+    [print(key,':',value) for key, value in pg.get_state().items()]
     pg.write_action(reset_output_coordinator=True)
-    print(pg.get_state())
+    [print(key,':',value) for key, value in pg.get_state().items()]
+
+def check_stuff(pg):
+    #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
+    instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,[1, 1],int(0.1/10E-9),0,0, False, False, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=False)
+    [print(key,':',value) for key, value in pg.get_state().items()]
+
+    pg.write_action(trigger_now=True)
+    [print(key,':',value) for key, value in pg.get_state().items()]
+    pg.read_all_messages(timeout=0.5)
+
 
 if __name__ == "__main__":
 
@@ -167,9 +186,13 @@ if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator(usb_port)
     assert pg.connect_serial()
 
+    '''STILL NEED TO ACTUALLY MODIDY THE OUTPUT COORDINATOR TO MAKE THE 
+    NOTIFY ON FINISHED WORK CORRECTLY AS A SETTTING RATHER THAN AN ACTION'''
+
     # check_disable_after_current_run(pg)
-    check_get_state(pg)
+    # check_get_state(pg)
     # check_reset_output_coordinator(pg)
+    check_stuff(pg)
     # notify_when_finished(pg)
     # echo_terminal_characters(pg)
     # cause_invalid_receive(pg)
