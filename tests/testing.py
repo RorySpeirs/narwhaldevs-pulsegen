@@ -212,6 +212,26 @@ def test_disable_bit_by_bit(pg):
             success += 1
     print(f'success rate = {success}/{a}. or {success/a*100:.02f}%')
 
+
+def function_argument_validation(pg):
+    # pg.write_action(reset_output_coordinator=True)
+    #address, state, duration, goto_address, goto_counter, stop_and_wait, hardware_trig_out, notify_computer, powerline_sync
+    instr0 = ndpulsegen.transcode.encode_instruction(0,5,[1, 0],0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,5,[0, 0],0,0, False, True, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+
+    pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=2, notify_when_run_finished=True)
+
+    # print(pg.get_state())
+    pg.write_action(trigger_now=True)
+
+    # pg.write_action(disable_after_current_run=True)
+    # pg.return_on_notification(finished=True, timeout=0.1):
+
 if __name__ == "__main__":
 
     usb_port ='COM6'
@@ -222,8 +242,9 @@ if __name__ == "__main__":
     '''STILL NEED TO ACTUALLY MODIDY THE OUTPUT COORDINATOR TO MAKE THE 
     NOTIFY ON FINISHED WORK CORRECTLY AS A SETTTING RATHER THAN AN ACTION'''
 
+    function_argument_validation(pg)
     # test_disable_bit_by_bit(pg)
-    check_disable_after_current_run(pg)
+    # check_disable_after_current_run(pg)
     # check_get_state(pg)
     # check_reset_output_coordinator(pg)
     # check_stuff(pg)

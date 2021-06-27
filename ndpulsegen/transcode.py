@@ -77,46 +77,6 @@ def decode_devicestate(message):
     notify_on_run_finished =    decode_lookup['notify_on_run_finished'][notify_on_run_finished_tag]
     return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'notify_on_run_finished':notify_on_run_finished, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
 
-
-# def decode_devicestate(message):
-#     ''' Messagein identifier:  1 byte: 103
-#     Message format:                     BITS USED   FPGA INDEX.
-#     output state:       3 bytes [0:3]   24 bits     [0+:24]     unsigned int. LSB=output 0
-#     final ram address:  2 bytes [3:5]   16 bits     [24+:16]    unsigned int.
-#     trigger time:       7 bytes [5:12]  56 bits     [40+:56]    unsigned int.
-#     trigger length:     1 byte  [12]    8 bits      [96+:8]     unsigned int.
-#     tags:               1 byte  [13]    8 bits      [104+:8]    unsigned int.
-#         run mode                        1 bit       [104]   
-#         trigger mode                    2 bit       [105+:2] 
-#         notify on main trig             1 bit       [107]   
-#         clock source                    1 bit       [108]   
-#         running                         1 bit       [109]
-#         software run_enable             1 bit       [110]            
-#         hardware run_enable             1 bit       [111]
-#     current ram address:2 bytes [14:16] 16 bits     [112+:16]   unsigned int.
-#     '''
-#     state =                 np.unpackbits(np.array([message[0], message[1], message[2]], dtype=np.uint8), bitorder='little')
-#     final_ram_address, =    struct.unpack('<Q', message[3:5] + bytes(6))
-#     trigger_time, =         struct.unpack('<Q', message[5:12] + bytes(1))
-#     trigger_length, =       struct.unpack('<Q', message[12:13] + bytes(7))
-#     tags, =                 struct.unpack('<Q', message[13:14] + bytes(7))
-#     current_ram_address, =  struct.unpack('<Q', message[14:16] + bytes(6))
-#     run_mode_tag =              (tags >> 0) & 0b1            
-#     trigger_mode_tag =          (tags >> 1) & 0b11              
-#     notify_on_main_trig_tag =   (tags >> 3) & 0b1    
-#     clock_source_tag =          (tags >> 4) & 0b1  
-#     running_tag =               (tags >> 5) & 0b1  
-#     software_run_enable_tag =   (tags >> 6) & 0b1  
-#     hardware_run_enable_tag =   (tags >> 7) & 0b1  
-#     run_mode =              decode_lookup['run_mode'][run_mode_tag]
-#     trigger_mode =          decode_lookup['trigger_mode'][trigger_mode_tag]
-#     notify_on_main_trig =   decode_lookup['notify_on_main_trig'][notify_on_main_trig_tag]
-#     clock_source =          decode_lookup['clock_source'][clock_source_tag]
-#     running =               decode_lookup['running'][running_tag]
-#     software_run_enable =   decode_lookup['software_run_enable'][software_run_enable_tag]
-#     hardware_run_enable =   decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
-#     return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
-
 def decode_powerlinestate(message):
     ''' Messagein identifier:  1 byte: 105
     Message format:                             BITS USED   FPGA INDEX.
@@ -195,48 +155,6 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     return message_identifier + powerline_trigger_delay + tags
 
 
-# def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None):
-#     ''' Messageout identifier:  1 byte: 154
-#     Message format:                             BITS USED   FPGA INDEX.
-#     final_RAM_address:          2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
-#     trigger_time:               7 bytes [2:9]   56 bits     [16+:56]    unsigned int.
-#     trigger_length:             1 byte  [9]     8 bits      [72+:8]     unsigned int.
-    
-#     tags:                       2 byte  [10:12] 10 bits     [80+:10]    unsigned int.
-#         run_mode                                2 bit       [80+:2]     [80]: run mode, [81]:update flag
-#         trigger_mode                            3 bits      [82+:3]     [82+:2]: trig mode, [84]:update flag
-#         trigger_notification_enable             2 bit       [85+:2]     [85]: trig notif, [86]:update flag
-#         update_flag:final_RAM_address           1 bit       [87]
-#         update_flag:trigger_time                1 bit       [88]
-#         update_flag:trigger_length              1 bit       [89]
-#     '''
-#     run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
-#     trigger_mode_tag =              encode_lookup['trigger_mode'][trigger_mode] << 2
-#     notify_on_main_trig_tag =       encode_lookup['notify_on_trig'][notify_on_main_trig] << 5
-#     if final_ram_address is None:   
-#         final_ram_address = 0
-#         update_final_ram_address_tag = 0
-#     else:
-#         update_final_ram_address_tag = 1 << 7
-#     if trigger_time is None:        
-#         trigger_time = 0
-#         update_trigger_time_tag = 0
-#     else:
-#         update_trigger_time_tag = 1 << 8
-#     if trigger_length is None:      
-#         trigger_length = 0
-#         update_trigger_length_tag = 0
-#     else:
-#         update_trigger_length_tag = 1 << 9
-
-#     tags = run_mode_tag | trigger_mode_tag | notify_on_main_trig_tag | update_final_ram_address_tag | update_trigger_time_tag | update_trigger_length_tag
-#     message_identifier =    struct.pack('B', msgout_identifier['device_options'])
-#     final_ram_address =     struct.pack('<Q', final_ram_address)[:2]
-#     trigger_time =          struct.pack('<Q', trigger_time)[:7]
-#     trigger_length =        struct.pack('<Q', trigger_length)[:1]
-#     tags =                  struct.pack('<Q', tags)[:2]
-#     return message_identifier + final_ram_address + trigger_time + trigger_length + tags
-
 def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None, software_run_enable=None, notify_when_run_finished=None):
     ''' Messageout identifier:  1 byte: 154
     Message format:                             BITS USED   FPGA INDEX.
@@ -284,30 +202,6 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=No
     tags =                  struct.pack('<Q', tags)[:2]
     return message_identifier + final_ram_address + trigger_time + trigger_length + tags
 
-# def encode_action(software_run_enable=None, trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, notify_when_current_run_finished=False, request_powerline_state=False):
-#     ''' Messageout identifier:  1 byte: 152
-#     Message format:                             BITS USED   FPGA INDEX.
-#     tags:                       1 byte  [0]     8 bits      [0+:8]    
-#         software_run_enable                     2 bits      [0+:2]      bit[1] indicates if "software_run_enable" is to be modified. bit[0] is the actual enable setting, it is ignored it bit[0] = 0   
-#         trigger_now                             1 bit       [2] 
-#         request_state                           1 bit       [3]
-#         reset_outpoot_coordinator               1 bit       [4] 
-#         disable_after_current_run               1 bit       [5] 
-#         notify_when_current_run_finished        1 bit       [6]
-#         request_powerline_state                 1 bit       [7]
-#     '''
-#     software_run_enable_tag =                        encode_lookup['software_run_enable'][software_run_enable] << 0
-#     trigger_now_tag =                   encode_lookup['trigger_now'][trigger_now] << 2
-#     request_state_tag =                 encode_lookup['request_state'][request_state] << 3
-#     reset_output_coordinator_tag =      encode_lookup['reset_output_coordinator'][reset_output_coordinator] << 4
-#     disable_after_current_run =         encode_lookup['disable_after_current_run'][disable_after_current_run] << 5
-#     notify_when_current_run_finished =  encode_lookup['notify_when_finished'][notify_when_current_run_finished] << 6
-#     request_powerline_state_tag =       encode_lookup['request_powerline_state'][request_powerline_state] << 7
-#     tags = software_run_enable_tag | trigger_now_tag | request_state_tag | reset_output_coordinator_tag | disable_after_current_run | notify_when_current_run_finished | request_powerline_state_tag
-#     message_identifier =    struct.pack('B', msgout_identifier['action_request'])
-#     tags =                  struct.pack('<Q', tags)[:1]
-#     return message_identifier + tags
-
 def encode_action(trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, request_powerline_state=False):
     ''' Messageout identifier:  1 byte: 152
     Message format:                             BITS USED   FPGA INDEX.
@@ -347,9 +241,72 @@ def encode_static_state(state):
     state =                 struct.pack('<Q', state)[:3] 
     return message_identifier + state
 
-def encode_instruction(address=0, state=0, duration=1, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False):
-    ''' Note. This function generates the instruction only. It is sent in a different instruction.
-        Messageout identifier:  1 byte: 151
+def encode_instruction(address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False):
+    """
+    Generates a timing instruction encoded in a format that is readable by the Pulse Gen FPGA design.
+
+    Parameters
+    ----------
+    address : int
+        `address` ∈ [0, 8191].
+        The address of this instruction in the Pulse Gen memory. Instructions are executed in sequential order
+        unless a nonzero `goto_counter` is specified.
+    duration : int
+        `duration` ∈ [1, 281474976710655].
+        The number of clock cycles (of 10 nanoseconds) that `state` is output before the next instruction is activated.
+    state : int or list or tuple or numpy.ndarray
+        The low/high output state for each of the 24 channels of the Pulse Gen for this instruction.
+        If `state` is an int, the state of each channel is determined by the value of the binary digit at the corresponding 
+        digit position. The least significant bit (rightmost bit) corresponds to channel 0. A digit value of 0 represents a low 
+        state, and 1 is a high state.
+        If `state` is a list, tuple, or array, then the index of the element corresponds to the channel of the Pulse Gen. Ie index
+        0 corresponds to channel 0. The boolean value of each element determinses whether that channel is low or high, where False 
+        corresponds to a low state, and True corresponds to a high state.
+    goto_address : int, optional
+        `goto_address` ∈ [0, 8191].
+        Specifies the address of the next instruction that the Pulse Gen will execute after the current instruction has finished.
+        This is used for creating 'loops' in the Pulse Gen's instruction order. `goto_address` is ignored if `goto_counter` = 0.
+    goto_counter : int, optional
+        `goto_counter` ∈ [0, 4294967295].
+        Specifies the number of times the Pulse Dev will jump to the `goto_address` after the current instruction has finished.
+        Each time the end of the current instruction is reached, a volitile copy of `goto_counter` is checked. If the value is nonzero, 
+        the device jumps to `goto_address` and decrements the volitile copy by one. If the volitile copy of `goto_counter` is zero, then
+        the device continues to the next sequential instruction after the current instruction, and replaces the volitile copy of `goto_counter`
+        with a saved original copy. This "resets" the current instruction to the state in which it was origianlly uploaded.
+    stop_and_wait : bool, optional
+        If True, a run will pause after the last cycle of the current instruction. A subsequent trigger will restart the run, and the next
+        instruction will immediately be executed.
+    hardware_trig_out : bool, optional
+        If True, when this instruction is first executed, a trigger pulse will also be output from the output trigger connector. This pulse
+        is output on the first cycle of the current instruction, irrespective of the `trigger_time` set in the global settings. The lenght of
+        this trigger pulse is determined by the `trigger_length` set in the global settings.
+    notify_computer : bool, optional
+        XXXXX
+    powerline_sync : bool, optional
+        XXXXXX
+
+    Returns
+    -------
+    bytes
+        The raw bytes of the instruction, ready to be uploaded to the Pulse Gen.
+
+    Raises
+    ------
+    TypeError
+        Arguments are checked for type to avoid undetermined behaviour of Pulse Gen.
+    ValueError
+        Arguments are checked that they lie in a valid range to avoid undetermined behaviour of Pulse Gen.
+
+    See Also
+    --------
+    encode_device_options : XXXXXX (Function a with its description)
+    encode_powerline_trigger_options : XXXXX
+    
+    Notes
+    -----
+    Below is the bitwise layout of the encoded instructions. The FPGA INDEX corresponds to 
+    the instruction bit index as written in Lucid HDL (hardware design language).
+    Messageout identifier:  1 byte: 151
     Message format:                             BITS USED   FPGA INDEX.
     instruction_address:        2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
     main_outputs_state:         3 bytes [2:5]   24 bits     [16+:24]    unsigned int.
@@ -361,7 +318,7 @@ def encode_instruction(address=0, state=0, duration=1, goto_address=0, goto_coun
         hardware_trigger_out                    1 bits      [137] 
         notify_instruction_activated            1 bit       [138]
         powerline_sync                          1 bit       [139] 
-    '''
+    """
     #I should include some sort of instruction validation. Ie, check all inputs are valid. Eg, duration!=0.
     state = state_multiformat_to_int(state)
     stop_and_wait_tag =     encode_lookup['stop_and_wait'][stop_and_wait] << 0
@@ -382,7 +339,7 @@ def state_multiformat_to_int(state):
     if isinstance(state, (list, tuple, np.ndarray)):
         state_int = 0
         for bit_idx, value in enumerate(state):
-            state_int += int(value) << bit_idx
+            state_int += bool(value) << bit_idx
         state = state_int
     return state
 
