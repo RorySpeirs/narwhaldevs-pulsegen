@@ -65,68 +65,85 @@ def print_bytes(bytemessage):
         print('{:08b}'.format(letter), end =" ")
     print('')
 
+# def check_disable_after_current_run(pg):
+#     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
+#     instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
+#     instr1 = ndpulsegen.transcode.encode_instruction(1,[0, 0],1,0,0, False, False, False)
+#     instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
+#     instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
+#     instructions = [instr0, instr1, instr2, instr3]
+#     pg.write_instructions(instructions)
+
+#     pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+#     # print(pg.get_state())
+
+#     pg.write_action(trigger_now=True)
+#     # print(pg.get_state())
+
+#     # time.sleep(3)
+#     print('Press Esc. key to stop looping.')
+#     kb = ndpulsegen.console_read.KBHit()
+#     while True:
+#         if kb.kbhit():
+#             if ord(kb.getch()) == 27:
+#                 break   
+#     kb.set_normal_term()
+#     print('Looping stopped.')
+#     pg.write_action(disable_after_current_run=True)
+#     # pg.write_action(disable_after_current_run=True)
+#     # Ok, with two disables_after current run, the next trig doesnt make it run continuously.
+#     # So i need to make the device ignore disabel after current run if it isnt currently running!
+
+
 def check_disable_after_current_run(pg):
+    # pg.write_action(reset_output_coordinator=True)
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
+    instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, True, False, False)
     instr1 = ndpulsegen.transcode.encode_instruction(1,[0, 0],1,0,0, False, False, False)
-    instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],1,0,0, False, False, False)
     instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    '''
+    1, 1, 52%
+    2, 2, 72%
+    1, 2, 64%
+    2, 1, 64%
+    
+    '''
+
+
+    pg.write_device_options(final_ram_address=1, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1, notify_when_run_finished=True)
+    # pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1, notify_when_run_finished=False)
+
     # print(pg.get_state())
 
+    '''The desired behaviour is that the notification will only occour in continuous mode when the coutput coordinator is DISABLED!!!!!! No at the end of every single loop.
+    This is different to the notify on main trigger, which I do want to notify on each and every main trigger, even in continuous mode. It might seem a somewhat arbitrary 
+    distinction, but ultimately, I see it as a useful way that an experimenter might want information about what is goin on with their experiment.
+    '''
     pg.write_action(trigger_now=True)
-    # print(pg.get_state())
-
-    # time.sleep(3)
-    print('Press Esc. key to stop looping.')
-    kb = ndpulsegen.console_read.KBHit()
-    while True:
-        if kb.kbhit():
-            if ord(kb.getch()) == 27:
-                break   
-    kb.set_normal_term()
-    print('Looping stopped.')
-    pg.write_action(disable_after_current_run=True)
+    pg.write_action(trigger_now=True)
+    # systime.sleep(0.123)
     # pg.write_action(disable_after_current_run=True)
-    # Ok, with two disables_after current run, the next trig doesnt make it run continuously.
-    # So i need to make the device ignore disabel after current run if it isnt currently running!
+    # pg.write_action(trigger_now=True)
+    # print(pg.return_on_notification(finished=True, timeout=0.1))
+    success = 0
+    for a in range(1, 501):
+        if np.mod(a, 100) == 0:
+            print(f'test {a}')
+        pg.write_action(trigger_now=True)
+        pg.write_action(trigger_now=True)
+        # systime.sleep(0.5)
+
+        pg.write_action(disable_after_current_run=True)
+        if pg.return_on_notification(finished=True, timeout=0.1):
+            success += 1
+    print(f'success rate = {success}/{a}. or {success/a*100:.02f}%')
 
 
-def notify_when_finished(pg):
-    #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,[0, 0],1,0,0, False, False, False)
-    instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
-    instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
-    instructions = [instr0, instr1, instr2, instr3]
-    pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
-    # print(pg.get_state())
-
-    # pg.write_action(notify_when_current_run_finished=True)
-    pg.write_action(trigger_now=True)
-    # pg.write_action(trigger_now=True, notify_when_current_run_finished=True)
-    print(pg.get_state())
-
-    # time.sleep(3)
-    print('Press Esc. key to stop looping.')
-    kb = ndpulsegen.console_read.KBHit()
-    while True:
-        if kb.kbhit():
-            if ord(kb.getch()) == 27:
-                break   
-    kb.set_normal_term()
-    print('Looping stopped.')
-    #Note. Last instruction is 3 seconds, and even though the loop mode is continuous, the run will only run once because disable_after_current_run=True
-    # pg.write_action(disable_after_current_run=True, notify_when_current_run_finished=True)
-    pg.write_action(disable_after_current_run=True)
-    # print(pg.return_on_notification(finished=True, timeout=5))
-    pg.read_all_messages(timeout=0.1)
-    # pg.write_action(notify_when_current_run_finished=True)
 
 def check_get_state(pg):
     # pg.write_device_options(final_ram_address=7123, run_mode='continuous', trigger_mode='software', trigger_time=987654321, notify_on_main_trig=False, trigger_length=253, software_run_enable=True, notify_when_run_finished=False)
@@ -171,13 +188,29 @@ def check_stuff(pg):
     pg.write_instructions(instructions)
 
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=True)
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=False)
-    [print(key,':',value) for key, value in pg.get_state().items()]
+    # pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=False)
+    # [print(key,':',value) for key, value in pg.get_state().items()]
+
+    # There is some memory. when disableing, it stazys enabled for one extra run.
 
     pg.write_action(trigger_now=True)
-    [print(key,':',value) for key, value in pg.get_state().items()]
+    # [print(key,':',value) for key, value in pg.get_state().items()]
     pg.read_all_messages(timeout=0.5)
 
+
+def test_disable_bit_by_bit(pg):
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=True)
+
+
+    success = 0
+    for a in range(1, 1001):
+        if np.mod(a, 100) == 0:
+            print(f'test {a}')
+
+        pg.write_action(disable_after_current_run=True)
+        if pg.return_on_notification(triggered=True, timeout=0.1):
+            success += 1
+    print(f'success rate = {success}/{a}. or {success/a*100:.02f}%')
 
 if __name__ == "__main__":
 
@@ -189,10 +222,11 @@ if __name__ == "__main__":
     '''STILL NEED TO ACTUALLY MODIDY THE OUTPUT COORDINATOR TO MAKE THE 
     NOTIFY ON FINISHED WORK CORRECTLY AS A SETTTING RATHER THAN AN ACTION'''
 
-    # check_disable_after_current_run(pg)
+    # test_disable_bit_by_bit(pg)
+    check_disable_after_current_run(pg)
     # check_get_state(pg)
     # check_reset_output_coordinator(pg)
-    check_stuff(pg)
+    # check_stuff(pg)
     # notify_when_finished(pg)
     # echo_terminal_characters(pg)
     # cause_invalid_receive(pg)
