@@ -54,28 +54,28 @@ def decode_devicestate(message):
     '''
     state =                 np.unpackbits(np.array([message[0], message[1], message[2]], dtype=np.uint8), bitorder='little')
     final_ram_address, =    struct.unpack('<Q', message[3:5] + bytes(6))
-    trigger_time, =         struct.unpack('<Q', message[5:12] + bytes(1))
+    trigger_out_delay, =        struct.unpack('<Q', message[5:12] + bytes(1))
     trigger_length, =       struct.unpack('<Q', message[12:13] + bytes(7))
     current_ram_address, =  struct.unpack('<Q', message[13:15] + bytes(6))
     tags, =                 struct.unpack('<Q', message[15:17] + bytes(6))
 
-    run_mode_tag =              (tags >> 0) & 0b1            
-    trigger_mode_tag =          (tags >> 1) & 0b11              
-    notify_on_main_trig_tag =   (tags >> 3) & 0b1    
-    clock_source_tag =          (tags >> 4) & 0b1  
-    running_tag =               (tags >> 5) & 0b1  
-    software_run_enable_tag =   (tags >> 6) & 0b1  
-    hardware_run_enable_tag =   (tags >> 7) & 0b1
-    notify_on_run_finished_tag =(tags >> 8) & 0b1    
-    run_mode =              decode_lookup['run_mode'][run_mode_tag]
-    trigger_mode =          decode_lookup['trigger_mode'][trigger_mode_tag]
-    notify_on_main_trig =   decode_lookup['notify_on_main_trig'][notify_on_main_trig_tag]
-    clock_source =          decode_lookup['clock_source'][clock_source_tag]
-    running =               decode_lookup['running'][running_tag]
-    software_run_enable =   decode_lookup['software_run_enable'][software_run_enable_tag]
-    hardware_run_enable =   decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
+    run_mode_tag =                  (tags >> 0) & 0b1            
+    trigger_mode_tag =              (tags >> 1) & 0b11              
+    notify_on_main_trig_out_tag =   (tags >> 3) & 0b1    
+    clock_source_tag =              (tags >> 4) & 0b1  
+    running_tag =                   (tags >> 5) & 0b1  
+    software_run_enable_tag =       (tags >> 6) & 0b1  
+    hardware_run_enable_tag =       (tags >> 7) & 0b1
+    notify_on_run_finished_tag =    (tags >> 8) & 0b1    
+    run_mode =                  decode_lookup['run_mode'][run_mode_tag]
+    trigger_mode =              decode_lookup['trigger_mode'][trigger_mode_tag]
+    notify_on_main_trig_out =   decode_lookup['notify_on_main_trig_out'][notify_on_main_trig_out_tag]
+    clock_source =              decode_lookup['clock_source'][clock_source_tag]
+    running =                   decode_lookup['running'][running_tag]
+    software_run_enable =       decode_lookup['software_run_enable'][software_run_enable_tag]
+    hardware_run_enable =       decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
     notify_on_run_finished =    decode_lookup['notify_on_run_finished'][notify_on_run_finished_tag]
-    return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_time':trigger_time, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig':notify_on_main_trig, 'notify_on_run_finished':notify_on_run_finished, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
+    return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'trigger_mode':trigger_mode, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_length':trigger_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
 
 def decode_powerlinestate(message):
     ''' Messagein identifier:  1 byte: 105
@@ -112,7 +112,7 @@ def decode_notification(message):
     address_notify =    decode_lookup['address_notify'][address_notify_tag]
     trig_notify =       decode_lookup['trig_notify'][trig_notify_tag]
     finished_notify =        decode_lookup['finished_notify'][finished_notify_tag]
-    return {'address':address_of_notification, 'address_notify':address_notify, 'trig_notify':trig_notify, 'finished_notify':finished_notify}
+    return {'address':address_of_notification, 'address_notify':address_notify, 'trigger_notify':trig_notify, 'finished_notify':finished_notify}
 
 def decode_serialecho(message):
     ''' Messagein identifier:  1 byte: 101
@@ -155,11 +155,95 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     return message_identifier + powerline_trigger_delay + tags
 
 
-def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_time=None, notify_on_main_trig=None, trigger_length=None, software_run_enable=None, notify_when_run_finished=None):
-    ''' Messageout identifier:  1 byte: 154
+def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=None, trigger_out_delay=None, notify_on_main_trig_out=None, trigger_length=None, software_run_enable=None, notify_when_run_finished=None):
+    ''' 
+        Generates the command to change most the global settings, encoded in a format that is readable by the Pulse Gen FPGA design.
+        All arguments are optional. All settings with arguments that are not 'None' are updated. All settings with argument 'None' are
+        not updated. 
+
+    Parameters
+    ----------
+    final_ram_address : int, optional
+        `final_ram_address` ∈ [0, 8191].
+        The address of the final instruction that is executed in a run. After this instruction has completed, the run will stop or restart,
+        depending on the `run_mode` setting.
+    run_mode : str, optional
+        `run_mode` ∈ ('single', 'continuous')
+        After completing of the instruction specified by `final_ram_address`, if `run_mode`='single' the device will immediately stop 
+        counting down to the next instruction, and all channels will retain the output state of the final instruction. 
+        If `run_mode`=='continuous', after the last cycle of the final instruction, the device will immediately execute the instruction
+        at address 0, and the entire run will begin again.
+    trigger_mode : str, optional
+        `trigger_mode` ∈ ('software', 'hardware', 'either')
+        Controls the accecpted source of input triggers that start or restart a run. If `trigger_mode`='software', then all hardware input 
+        trigger signals are ignored, and the input trigger can only be activated using a software trigger, which is generated with the 
+        `encode_action' function with argument `trigger_now`=True. If `trigger_mode`='hardware' the opposite is the case; all software 
+        triggers are ignored, and only harware input trigger signals start or restart a run. If `trigger_mode`='either' both software and 
+        hardware input triggers are accepted.
+    trigger_out_delay : int, optional
+        `trigger_out_delay` ∈ [0, 72057594037927935].
+        Controls the delay between the first cycle of a run, and the start of the hardware output trigger pulse. This only controls the delay
+        for the output trigger that is emittted at the start of a run, any output triggers that are emitted because an instruction contains 
+        `hardware_trig_out`=True is emitted on the first cycle of execution of that instruction.
+    notify_on_main_trig_out : bool, optional
+        If True, when the main hardware output trigger pulse is sent, a notification will be sent to the host computer. The notification dictionary 
+        will contain 'trigger_notify':True, and the 'address' field will be equal to the address of the instruction that is currently being
+        executed. This setting only controls if a notification is sent on the output trigger that is emittted at the start of a run, not those 
+        produced by instructions with argument 'notify_computer':True.
+    trigger_length: int, optional
+        `trigger_length` ∈ [0, 255].
+        Controls the duration of hardware output trigger pulse, for both the output trigger that is emittted at the start of a run, and for those
+        emitterd beacuse an instruction contains `hardware_trig_out`=True. If `trigger_length`=0, not putput pulse is emitted.
+    software_run_enable: bool, optional
+        If False, and a run is in progress the timer in the run is immediately paused, and all channels maintain their current output the output.
+        If False, and a run is not in progress, the run will be prevented from starting until `software_run_enable`=True. If the device recieves
+        a trigger while `software_run_enable`=False, the run will start immediately when changed to `software_run_enable`=True.
+
+        I THINK THIS IS A BAD WAY FOR IT TO WORK. I THINK IF software_run_enable OR hardware_run_enable IS FALSE THEN THE DEVICE SHOULD IGNORE
+        ALL TRIGGERS DURING THAT PERIOD. THIS WOULD BE USEFUL FOR EXAMPLE, IF A TRIGGER PULSE IS BEING EMITTERD REGULARLY FROM A GIVEN DEVICE.
+        YOU MIGHT NOT ALWAYS WANT THIS TO TRIGGER A RUN (SO YOU CAN SET SOFTWARE ENABLE TO FALSE), BUT WHEN IT DOES TRIGGER A RUN, YOU WANT
+        THAT RUN TO BE SYNCHRONISED WITH THE TRIGGER PULSE!!!!
+        TO SOME EXTENT THIS COULD BE WORKED AROUND BY SETTING TO TRIG MODE TO SOFTWARE, THEN HARDWARE, THEN QUICKLY BACK TO SOFTWARE, THIS 
+        CREATES NON-DETERMINISTIC RACE CONDITIONS.
+
+        HMMMM, THIS CREATES AN INTERESTING USE CASE DISTINCTION. FOR THE HARDWARE INPUT, I HAD INVISAGED THAT IF SOME HARWARE CONDITION WASN'T MET
+        THAT THE LINE WOULD BE PULLED LOW UNTIL THE CONDITION WAS MET AGAIN. THIS IS DIFFERENT TO THE SOFTWARE CASE, WHERE THE ABOVE ARGUMENT,
+        MAES A LOT OF SENSE. THERE IS NO PARTICULAR REASON THAT THE TWO OPERATIONS HAVE TO WORK IN THE SAME WAY.
+
+        A BETTER WAW TO FIX IT IS THIS:
+        1. CHANGE 1: if (trig_hardware)  to  if (trig_hardware && run_enable_software)
+
+
+
+
+
+    Returns
+    -------
+    bytes
+        The raw bytes of the command, ready to be uploaded to the Pulse Gen.
+
+    Raises
+    ------
+    TypeError
+        Arguments are checked for type to avoid undetermined behaviour of Pulse Gen.
+    ValueError
+        Arguments are checked to ensure they lie in a valid range to avoid undetermined behaviour of Pulse Gen.
+
+    See Also
+    --------
+    encode_instruction : XXXX
+    encode_action : XXXXX
+    encode_device_options : The function that encodes the global settings of the Pulse Gen.
+    encode_powerline_trigger_options : The function that encodes the global settings of the Pulse Gen which relate to powerline synchronisation.
+    
+    Notes
+    -----
+    Below is the bitwise layout of the encoded instructions. The FPGA INDEX corresponds to 
+    the instruction bit index as written in Lucid HDL (hardware design language).
+    Messageout identifier:  1 byte: 154
     Message format:                             BITS USED   FPGA INDEX.
     final_RAM_address:          2 bytes [0:2]   16 bits     [0+:16]     unsigned int.
-    trigger_time:               7 bytes [2:9]   56 bits     [16+:56]    unsigned int.
+    trigger_out_delay:          7 bytes [2:9]   56 bits     [16+:56]    unsigned int.
     trigger_length:             1 byte  [9]     8 bits      [72+:8]     unsigned int.
     
     tags:                       2 byte  [10:12] 14 bits     [80+:14]    unsigned int.
@@ -167,14 +251,14 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=No
         trigger_mode                            3 bits      [82+:3]     [82+:2]: trig mode, [84]:update flag
         trigger_notification_enable             2 bit       [85+:2]     [85]: trig notif, [86]:update flag
         update_flag:final_RAM_address           1 bit       [87]
-        update_flag:trigger_time                1 bit       [88]
+        update_flag:trigger_out_delay           1 bit       [88]
         update_flag:trigger_length              1 bit       [89]
         software_run_enable                     2 bit       [90+:2]     [90]: software_run_enable, [91]:update flag
         notify_when_run_finished                2 bit       [92+:2]     [92]: notify_when_run_finished, [93]:update flag
     '''
     run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
     trigger_mode_tag =              encode_lookup['trigger_mode'][trigger_mode] << 2
-    notify_on_main_trig_tag =       encode_lookup['notify_on_trig'][notify_on_main_trig] << 5
+    notify_on_main_trig_out_tag =   encode_lookup['notify_on_trig'][notify_on_main_trig_out] << 5
     software_run_enable_tag =       encode_lookup['software_run_enable'][software_run_enable] << 10
     notify_when_run_finished_tag =  encode_lookup['notify_when_finished'][notify_when_run_finished] << 12
 
@@ -183,24 +267,24 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_mode=No
         update_final_ram_address_tag = 0
     else:
         update_final_ram_address_tag = 1 << 7
-    if trigger_time is None:        
-        trigger_time = 0
-        update_trigger_time_tag = 0
+    if trigger_out_delay is None:        
+        trigger_out_delay = 0
+        update_trigger_out_delay_tag = 0
     else:
-        update_trigger_time_tag = 1 << 8
+        update_trigger_out_delay_tag = 1 << 8
     if trigger_length is None:      
         trigger_length = 0
         update_trigger_length_tag = 0
     else:
         update_trigger_length_tag = 1 << 9
 
-    tags = run_mode_tag | trigger_mode_tag | notify_on_main_trig_tag | update_final_ram_address_tag | update_trigger_time_tag | update_trigger_length_tag | software_run_enable_tag | notify_when_run_finished_tag
+    tags = run_mode_tag | trigger_mode_tag | notify_on_main_trig_out_tag | update_final_ram_address_tag | update_trigger_out_delay_tag | update_trigger_length_tag | software_run_enable_tag | notify_when_run_finished_tag
     message_identifier =    struct.pack('B', msgout_identifier['device_options'])
     final_ram_address =     struct.pack('<Q', final_ram_address)[:2]
-    trigger_time =          struct.pack('<Q', trigger_time)[:7]
+    trigger_out_delay =     struct.pack('<Q', trigger_out_delay)[:7]
     trigger_length =        struct.pack('<Q', trigger_length)[:1]
     tags =                  struct.pack('<Q', tags)[:2]
-    return message_identifier + final_ram_address + trigger_time + trigger_length + tags
+    return message_identifier + final_ram_address + trigger_out_delay + trigger_length + tags
 
 def encode_action(trigger_now=False, request_state=False, reset_output_coordinator=False, disable_after_current_run=False, request_powerline_state=False):
     ''' Messageout identifier:  1 byte: 152
@@ -278,12 +362,17 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
         instruction will immediately be executed.
     hardware_trig_out : bool, optional
         If True, when this instruction is first executed, a trigger pulse will also be output from the output trigger connector. This pulse
-        is output on the first cycle of the current instruction, irrespective of the `trigger_time` set in the global settings. The lenght of
+        is output on the first cycle of the current instruction, irrespective of the `trigger_out_delay` set in the global settings. The lenght of
         this trigger pulse is determined by the `trigger_length` set in the global settings.
     notify_computer : bool, optional
-        XXXXX
+        If True, when this instruction is first executed, a notification will be sent to the host computer. The notification dictionary will
+        contain 'address_notify':True, and the 'address' field will be equal to the address of this instruction. 
     powerline_sync : bool, optional
-        XXXXXX
+        If True, when a run is paused and this is the next instruction that would be executed, the run automatically restarts on the next
+        recieved `powerline_trigger`. An instruction where `powerline_sync` is True usually follows an instrustion where `stop_and_wait`
+        is True. This allows a particular section of a run to be be very accurately synchronised with the powerline phase, which may be 
+        helpful for example if that part of the run corresponds to a measurement that is very sensitive to magnetic field. 
+        The `powerline_trigger` respects the global setting `powerline_trigger_delay`. The global setting `trigger_on_powerline` is ignored. 
 
     Returns
     -------
@@ -295,12 +384,12 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
     TypeError
         Arguments are checked for type to avoid undetermined behaviour of Pulse Gen.
     ValueError
-        Arguments are checked that they lie in a valid range to avoid undetermined behaviour of Pulse Gen.
+        Arguments are checked to ensure they lie in a valid range to avoid undetermined behaviour of Pulse Gen.
 
     See Also
     --------
-    encode_device_options : XXXXXX (Function a with its description)
-    encode_powerline_trigger_options : XXXXX
+    encode_device_options : The function that encodes the global settings of the Pulse Gen.
+    encode_powerline_trigger_options : The function that encodes the global settings of the Pulse Gen which relate to powerline synchronisation.
     
     Notes
     -----
@@ -319,7 +408,32 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
         notify_instruction_activated            1 bit       [138]
         powerline_sync                          1 bit       [139] 
     """
-    #I should include some sort of instruction validation. Ie, check all inputs are valid. Eg, duration!=0.
+    # Type and value checking
+    if not isinstance(address, int):
+        err_msg = f'\'address\' must be an int, not a {type(address).__name__}'
+        raise TypeError(err_msg)
+    if address < 0 or address > 8191:
+        err_msg = f'\'address\' out of range. Must be in must be range [0, 8191]'
+        raise ValueError(err_msg)
+    if not isinstance(duration, int):
+        err_msg = f'\'duration\' must be an int, not a {type(duration).__name__}'
+        raise TypeError(err_msg)
+    if duration < 1 or duration > 281474976710655:
+        err_msg = f'\'duration\' out of range. Must be in range [1, 281474976710655]'
+        raise ValueError(err_msg)
+    if not isinstance(goto_address, int):
+        err_msg = f'\'goto_address\' must be an int, not a {type(goto_address).__name__}'
+        raise TypeError(err_msg)
+    if goto_address < 0 or goto_address > 8191:
+        err_msg = f'\'goto_address\' out of range. Must be in must be range [0, 8191]'
+        raise ValueError(err_msg)
+    if not isinstance(goto_counter, int):
+        err_msg = f'\'goto_counter\' must be an int, not a {type(goto_counter).__name__}'
+        raise TypeError(err_msg)
+    if goto_counter < 0 or goto_counter > 4294967295:
+        err_msg = f'\'goto_counter\' out of range. Must be in range [0, 4294967295]'
+        raise ValueError(err_msg)
+    # Tag arguments are not explicitly validated. Errors are caught in the dictionary lookup
     state = state_multiformat_to_int(state)
     stop_and_wait_tag =     encode_lookup['stop_and_wait'][stop_and_wait] << 0
     hard_trig_out_tag =     encode_lookup['trig_out_on_instruction'][hardware_trig_out] << 1
@@ -336,11 +450,21 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
     return message_identifier + address + state + duration + goto_address + goto_counter + tags
 
 def state_multiformat_to_int(state):
-    if isinstance(state, (list, tuple, np.ndarray)):
+    if isinstance(state, int):
+        if state < 0 or state > 16777215:
+            err_msg = f'\'state\' out of range. If state is int, it must be in range [{bin(0)}, {bin(16777215)}]'
+            raise ValueError(err_msg)
+    elif isinstance(state, (list, tuple, np.ndarray)):
+        if len(state) > 24:
+            err_msg = f'\'state\' too long. If state is list, tuple or numpy.ndarray, it must have length <= 24'
+            raise ValueError(err_msg)
         state_int = 0
         for bit_idx, value in enumerate(state):
             state_int += bool(value) << bit_idx
         state = state_int
+    else:
+        err_msg = f'\'state\' must be an int, list, tuple or numpy.ndarray, not a {type(state).__name__}'
+        raise TypeError(err_msg)
     return state
 
 #########################################################
@@ -363,7 +487,7 @@ decode_lookup = {
     'software_run_enable':{1:True, 0:False},
     'hardware_run_enable':{1:True, 0:False},
     'noitfy_on_instruction':{1:True, 0:False},
-    'notify_on_main_trig':{1:True, 0:False},
+    'notify_on_main_trig_out':{1:True, 0:False},
     'notify_on_run_finished':{1:True, 0:False},
     'run_mode':{0:'single', 1:'continuous'},
     'trigger_mode':{0:'software', 1:'hardware', 2:'either'},

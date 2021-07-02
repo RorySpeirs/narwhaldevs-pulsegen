@@ -216,33 +216,40 @@ def test_disable_bit_by_bit(pg):
 def function_argument_validation(pg):
     # pg.write_action(reset_output_coordinator=True)
     #address, state, duration, goto_address, goto_counter, stop_and_wait, hardware_trig_out, notify_computer, powerline_sync
-    instr0 = ndpulsegen.transcode.encode_instruction(0,5,[1, 0],0,0, False, False, False)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,5,[0, 0],0,0, False, True, False)
-    instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
-    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
-    instructions = [instr0, instr1, instr2, instr3]
-    pg.write_instructions(instructions)
+    # instr0 = ndpulsegen.transcode.encode_instruction(0,1,[1,0] ,0,0, False, False, False)
+    # instr1 = ndpulsegen.transcode.encode_instruction(1,5,[0, 0],0,0, False, True, False)
+    # instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
+    # instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
+    # instructions = [instr0, instr1, instr2, instr3]
+    # pg.write_instructions(instructions)
 
+    ndpulsegen.transcode.encode_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=2, notify_when_run_finished=True)
 
-    pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=2, notify_when_run_finished=True)
+    # pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=2, notify_when_run_finished=True)
 
-    # print(pg.get_state())
-    pg.write_action(trigger_now=True)
+    # # print(pg.get_state())
+    # pg.write_action(trigger_now=True)
 
     # pg.write_action(disable_after_current_run=True)
     # pg.return_on_notification(finished=True, timeout=0.1):
 
 if __name__ == "__main__":
 
-    usb_port ='COM6'
-    # usb_port ='tty.usbserial-FT3KRFFN0'
-    pg = ndpulsegen.PulseGenerator(usb_port)
-    assert pg.connect_serial()
+    # usb_port ='COM6'
+    # # usb_port ='tty.usbserial-FT3KRFFN0'
+    # pg = ndpulsegen.PulseGenerator(usb_port)
+    # assert pg.connect_serial()
+
+    # I NEED TO SEE WHAT HAPPENS IF THE 0TH INSTRUCTION HAS A POWERLINE_SYNC TAG. I THINK IT MIGHT START AUTOMATICALLY. THIS WOULD NOT
+    # BE GOOD, BECAUSE IT MEANS THE RUN WOULD HAPPEN THE MOMENT THE INSTRUCTION IS LOADED. IT WOULDNT WAIT FOR A TRIGGER.
+    # I COULD POTENTIALLY USE THE RUN_ACTIVE SETTING THAT I JUST MADE TO GET AROUND THIS.
+
+    # ALSO, GO AND PIPELINE THE POWERLINE TRIGGER. THERE IS NO PROBLEM WITH A BIT OF EXTRA LATENCY, AND IT MIGHT HELP TIMING.
 
     '''STILL NEED TO ACTUALLY MODIDY THE OUTPUT COORDINATOR TO MAKE THE 
     NOTIFY ON FINISHED WORK CORRECTLY AS A SETTTING RATHER THAN AN ACTION'''
 
-    function_argument_validation(pg)
+    function_argument_validation(pg=None)
     # test_disable_bit_by_bit(pg)
     # check_disable_after_current_run(pg)
     # check_get_state(pg)

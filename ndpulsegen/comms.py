@@ -240,7 +240,7 @@ class PulseGenerator():
                 # wait for a notification. 
                 notification = notification_queue.get(timeout=timeout_remaining)
                 # check if notification satisfies any of the criteria set 
-                if (notification['address_notify'] and notification['address'] == address) or (notification['trig_notify'] == triggered) or (notification['finished_notify'] == finished) or return_on_any:
+                if (notification['address_notify'] and notification['address'] == address) or (notification['trigger_notify'] == triggered) or (notification['finished_notify'] == finished) or return_on_any:
                     return notification
             except queue.Empty as ex:
                 # Reached timeout limit.
@@ -371,7 +371,7 @@ class PulseGenerator():
 #         while True:
 #             identifier, message = self._get_message(timeout_remaining, print_all_messages)
 #             if identifier == transcode.msgin_identifier['notification']:
-#                 if (message['address_notify'] and message['address'] == address) or (message['trig_notify'] == triggered) or (message['finished_notify'] == finished) or return_on_any:
+#                 if (message['address_notify'] and message['address'] == address) or (message['trigger_notify'] == triggered) or (message['finished_notify'] == finished) or return_on_any:
 #                     return message
 #             if identifier is None:
 #                 return
