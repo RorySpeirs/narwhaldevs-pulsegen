@@ -224,7 +224,7 @@ def function_argument_validation(pg):
     # pg.write_instructions(instructions)
 
     ndpulsegen.transcode.encode_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=2, notify_when_run_finished=True)
-
+    print(help(ndpulsegen.transcode.encode_device_options))
     # pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=2, notify_when_run_finished=True)
 
     # # print(pg.get_state())
@@ -233,12 +233,91 @@ def function_argument_validation(pg):
     # pg.write_action(disable_after_current_run=True)
     # pg.return_on_notification(finished=True, timeout=0.1):
 
+def test_software_enable(pg):
+    # pg.write_action(reset_output_coordinator=True)
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instr0 = ndpulsegen.transcode.encode_instruction(0,1,[1,0] ,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,2,[0, 0],0,0, False, True, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='hardware', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, software_run_enable=True, notify_when_run_finished=False)
+
+    systime.sleep(3)
+    pg.write_device_options(software_run_enable=False)
+    # pg.write_action(trigger_now=True)
+    systime.sleep(3)
+    pg.write_device_options(software_run_enable=True)
+
+    # pg.write_device_options(run_mode='continuous')
+    # pg.write_action(trigger_now=True)
+    # pg.write_device_options(software_run_enable=True)
+
+
+    # print(pg.get_state())
+    # pg.write_action(trigger_now=True)
+    pg.read_all_messages(timeout=0.1)
+
+def test_trig_source(pg):
+    # pg.write_action(reset_output_coordinator=True)
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instr0 = ndpulsegen.transcode.encode_instruction(0,1,[1,0] ,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,2,[0, 0],0,0, False, True, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    # pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='single_hardware', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, software_run_enable=True, notify_when_run_finished=False)
+
+    pg.write_device_options(trigger_source='single_hardware')
+    # pg.write_device_options(trigger_source='hardware')
+
+
+    [print(key,':',value) for key, value in pg.get_state().items()]
+
+    # pg.write_action(trigger_now=True)
+
+    # pg.write_device_options(software_run_enable=False)
+    # pg.write_action(trigger_now=True)
+    # pg.write_device_options(software_run_enable=True)
+
+    # pg.write_device_options(run_mode='continuous')
+    # pg.write_action(trigger_now=True)
+    # pg.write_device_options(software_run_enable=True)
+
+
+    # print(pg.get_state())
+    # pg.write_action(trigger_now=True)
+    pg.read_all_messages(timeout=0.1)
+
+
+def check_notify_when_finished(pg):
+    # pg.write_action(reset_output_coordinator=True)
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instr0 = ndpulsegen.transcode.encode_instruction(0,100,[1,0] ,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,2,[0, 0],0,0, False, True, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, software_run_enable=True, notify_when_run_finished=True)
+
+    # [print(key,':',value) for key, value in pg.get_state().items()]
+    pg.write_action(trigger_now=True)
+    pg.write_action(disable_after_current_run=True)
+    pg.read_all_messages(timeout=0.1)
+
+
 if __name__ == "__main__":
 
-    # usb_port ='COM6'
-    # # usb_port ='tty.usbserial-FT3KRFFN0'
-    # pg = ndpulsegen.PulseGenerator(usb_port)
-    # assert pg.connect_serial()
+    usb_port ='COM6'
+    # usb_port ='tty.usbserial-FT3KRFFN0'
+    pg = ndpulsegen.PulseGenerator(usb_port)
+    assert pg.connect_serial()
 
     # I NEED TO SEE WHAT HAPPENS IF THE 0TH INSTRUCTION HAS A POWERLINE_SYNC TAG. I THINK IT MIGHT START AUTOMATICALLY. THIS WOULD NOT
     # BE GOOD, BECAUSE IT MEANS THE RUN WOULD HAPPEN THE MOMENT THE INSTRUCTION IS LOADED. IT WOULDNT WAIT FOR A TRIGGER.
@@ -246,10 +325,11 @@ if __name__ == "__main__":
 
     # ALSO, GO AND PIPELINE THE POWERLINE TRIGGER. THERE IS NO PROBLEM WITH A BIT OF EXTRA LATENCY, AND IT MIGHT HELP TIMING.
 
-    '''STILL NEED TO ACTUALLY MODIDY THE OUTPUT COORDINATOR TO MAKE THE 
-    NOTIFY ON FINISHED WORK CORRECTLY AS A SETTTING RATHER THAN AN ACTION'''
 
-    function_argument_validation(pg=None)
+    check_notify_when_finished(pg)
+    # test_trig_source(pg)
+    # test_software_enable(pg)
+    # function_argument_validation(pg=None)
     # test_disable_bit_by_bit(pg)
     # check_disable_after_current_run(pg)
     # check_get_state(pg)
