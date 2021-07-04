@@ -312,6 +312,53 @@ def check_notify_when_finished(pg):
     pg.read_all_messages(timeout=0.1)
 
 
+def check_powerline_global(pg):
+    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+    instr0 = ndpulsegen.transcode.encode_instruction(0,1,[1,0] ,0,0, False, False, False)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,2,[0, 0],0,0, False, True, False)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,3,[1, 0],0,0, False, False, False)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0],0,0, False, False, False)
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='hardware', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, software_run_enable=True, notify_when_run_finished=False)
+    pg.write_powerline_trigger_options(trigger_on_powerline=True)
+    pg.write_action(trigger_now=True)
+
+    # kb = ndpulsegen.console_read.KBHit()
+    # print('Press \'Esc\' to stop.')
+    # while True:
+    #     if kb.kbhit():
+    #         input_character = kb.getch()
+    #         if input_character.encode() == chr(27).encode():
+    #             break
+    # pg.write_action(disable_after_current_run=True)
+    pg.read_all_messages(timeout=0.1)
+
+def check_powerline_instruction(pg):
+    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+    instr0 = ndpulsegen.transcode.encode_instruction(0,500000,[1, 0], powerline_sync=True)
+    instr1 = ndpulsegen.transcode.encode_instruction(1,100000,[0, 0])
+    instr2 = ndpulsegen.transcode.encode_instruction(2,200000,[1, 0])
+    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0])
+    instructions = [instr0, instr1, instr2, instr3]
+
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, software_run_enable=True, notify_when_run_finished=False)
+    pg.write_powerline_trigger_options(trigger_on_powerline=False)
+
+    pg.write_instructions(instructions)
+    pg.write_action(trigger_now=True)
+
+    # kb = ndpulsegen.console_read.KBHit()
+    # print('Press \'Esc\' to stop.')
+    # while True:
+    #     if kb.kbhit():
+    #         input_character = kb.getch()
+    #         if input_character.encode() == chr(27).encode():
+    #             break
+    # pg.write_action(disable_after_current_run=True)
+    pg.read_all_messages(timeout=0.1)
+
 if __name__ == "__main__":
 
     usb_port ='COM6'
@@ -323,10 +370,10 @@ if __name__ == "__main__":
     # BE GOOD, BECAUSE IT MEANS THE RUN WOULD HAPPEN THE MOMENT THE INSTRUCTION IS LOADED. IT WOULDNT WAIT FOR A TRIGGER.
     # I COULD POTENTIALLY USE THE RUN_ACTIVE SETTING THAT I JUST MADE TO GET AROUND THIS.
 
-    # ALSO, GO AND PIPELINE THE POWERLINE TRIGGER. THERE IS NO PROBLEM WITH A BIT OF EXTRA LATENCY, AND IT MIGHT HELP TIMING.
+    # NOPE. i CANT USE RUN ACTIVE. THIS IS A HARDER PROBLEM THAN i THOUTGHT.
 
-
-    check_notify_when_finished(pg)
+    check_powerline_instruction(pg)
+    # check_notify_when_finished(pg)
     # test_trig_source(pg)
     # test_software_enable(pg)
     # function_argument_validation(pg=None)
