@@ -223,8 +223,15 @@ def function_argument_validation(pg):
     # instructions = [instr0, instr1, instr2, instr3]
     # pg.write_instructions(instructions)
 
-    ndpulsegen.transcode.encode_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=2, notify_when_run_finished=True)
-    print(help(ndpulsegen.transcode.encode_device_options))
+    # ndpulsegen.transcode.encode_device_options(final_ram_address=1, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, notify_when_run_finished=True)
+    # ndpulsegen.transcode.encode_device_options(run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_length=1, notify_when_run_finished=True)
+    # ndpulsegen.transcode.encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigger_delay=None)
+    a = ndpulsegen.transcode.encode_echo(b'd')
+    print(a)
+    print(type(a))
+    print(len(a))
+    # print()
+    # print(help(ndpulsegen.transcode.encode_device_options))
     # pg.write_device_options(final_ram_address=1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=2, notify_when_run_finished=True)
 
     # # print(pg.get_state())
@@ -361,22 +368,24 @@ def check_powerline_instruction(pg):
 
 if __name__ == "__main__":
 
-    usb_port ='COM6'
-    # usb_port ='tty.usbserial-FT3KRFFN0'
-    pg = ndpulsegen.PulseGenerator(usb_port)
-    assert pg.connect_serial()
+    # print(help(ndpulsegen.transcode.encode_instruction))
+    # print(help(ndpulsegen.transcode.encode_powerline_trigger_options))
+    # usb_port ='COM6'
+    # # usb_port ='tty.usbserial-FT3KRFFN0'
+    # pg = ndpulsegen.PulseGenerator(usb_port)
+    # assert pg.connect_serial()
 
-    # I NEED TO SEE WHAT HAPPENS IF THE 0TH INSTRUCTION HAS A POWERLINE_SYNC TAG. I THINK IT MIGHT START AUTOMATICALLY. THIS WOULD NOT
+    # I NEED TO SEE WHAT HAPPENS IF THE 0TH INSTRUCTION HAS A POWERLINE_SYNC TAG. I THINK IT MIGHT START AUTOMATICALLY (yep, it does). THIS WOULD NOT
     # BE GOOD, BECAUSE IT MEANS THE RUN WOULD HAPPEN THE MOMENT THE INSTRUCTION IS LOADED. IT WOULDNT WAIT FOR A TRIGGER.
     # I COULD POTENTIALLY USE THE RUN_ACTIVE SETTING THAT I JUST MADE TO GET AROUND THIS.
 
     # NOPE. i CANT USE RUN ACTIVE. THIS IS A HARDER PROBLEM THAN i THOUTGHT.
 
-    check_powerline_instruction(pg)
+    # check_powerline_instruction(pg)
     # check_notify_when_finished(pg)
     # test_trig_source(pg)
     # test_software_enable(pg)
-    # function_argument_validation(pg=None)
+    function_argument_validation(pg=None)
     # test_disable_bit_by_bit(pg)
     # check_disable_after_current_run(pg)
     # check_get_state(pg)
