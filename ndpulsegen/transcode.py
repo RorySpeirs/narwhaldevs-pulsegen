@@ -309,7 +309,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
         wait_for_powerline                      2 bit       [25+:2]     [25]: powerline_wait_setting, [26]:update flag
     '''
     # Type and value checking
-    if isinstance(powerline_trigger_delay, int):
+    if isinstance(powerline_trigger_delay, (int, np.integer)):
         update_powerline_trigger_delay_tag = 1 << 7
         if powerline_trigger_delay < 0 or powerline_trigger_delay > 4194303:
             err_msg = f'\'powerline_trigger_delay\' out of range. Must be in must be range [0, 4194303]'
@@ -318,7 +318,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
         powerline_trigger_delay = 0
         update_powerline_trigger_delay_tag = 0
     else:
-        err_msg = f'\'powerline_trigger_delay\' must be an int, not a {type(powerline_trigger_delay).__name__}'
+        err_msg = f'\'powerline_trigger_delay\' must be an int or np.integer, not a {type(powerline_trigger_delay).__name__}'
         raise TypeError(err_msg)
     # Tag arguments are not explicitly validated. Errors are caught in the dictionary lookup
     trigger_on_powerline_tag =  encode_lookup['trigger_on_powerline'][trigger_on_powerline] << 1
@@ -449,7 +449,7 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         notify_when_run_finished                2 bit       [92+:2]     [92]: notify_when_run_finished, [93]:update flag
     """
     # Type and value checking
-    if isinstance(final_ram_address, int):
+    if isinstance(final_ram_address, (int, np.integer)):
         update_final_ram_address_tag = 1 << 7
         if final_ram_address < 0 or final_ram_address > 8191:
             err_msg = f'\'final_ram_address\' out of range. Must be in must be range [0, 8191]'
@@ -458,9 +458,9 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         final_ram_address = 0
         update_final_ram_address_tag = 0
     else:
-        err_msg = f'\'final_ram_address\' must be an int, not a {type(final_ram_address).__name__}'
+        err_msg = f'\'final_ram_address\' must be an int or np.integer, not a {type(final_ram_address).__name__}'
         raise TypeError(err_msg)
-    if isinstance(trigger_out_delay, int):
+    if isinstance(trigger_out_delay, (int, np.integer)):
         update_trigger_out_delay_tag = 1 << 8
         if trigger_out_delay < 0 or trigger_out_delay > 72057594037927936:
             err_msg = f'\'trigger_out_delay\' out of range. Must be in range [0, 72057594037927936]'
@@ -469,9 +469,9 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         trigger_out_delay = 0
         update_trigger_out_delay_tag = 0
     else:
-        err_msg = f'\'trigger_out_delay\' must be an int, not a {type(trigger_out_delay).__name__}'
+        err_msg = f'\'trigger_out_delay\' must be an int or np.integer, not a {type(trigger_out_delay).__name__}'
         raise TypeError(err_msg)
-    if isinstance(trigger_out_length, int):
+    if isinstance(trigger_out_length, (int, np.integer)):
         update_trigger_out_length_tag = 1 << 9
         if trigger_out_length < 0 or trigger_out_length > 255:
             err_msg = f'\'trigger_out_length\' out of range. Must be in range [0, 255]'
@@ -480,7 +480,7 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         trigger_out_length = 0
         update_trigger_out_length_tag = 0
     else:
-        err_msg = f'\'trigger_out_length\' must be an int, not a {type(trigger_out_length).__name__}'
+        err_msg = f'\'trigger_out_length\' must be an int or np.integer, not a {type(trigger_out_length).__name__}'
         raise TypeError(err_msg)
     # Tag arguments are not explicitly validated. Errors are caught in the dictionary lookup
     run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
@@ -787,26 +787,26 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
         powerline_sync                          1 bit       [139] 
     """
     # Type and value checking
-    if not isinstance(address, int):
-        err_msg = f'\'address\' must be an int, not a {type(address).__name__}'
+    if not isinstance(address, (int, np.integer)):
+        err_msg = f'\'address\' must be an int or np.integer, not a {type(address).__name__}'
         raise TypeError(err_msg)
     if address < 0 or address > 8191:
         err_msg = f'\'address\' out of range. Must be in must be range [0, 8191]'
         raise ValueError(err_msg)
-    if not isinstance(duration, int):
-        err_msg = f'\'duration\' must be an int, not a {type(duration).__name__}'
+    if not isinstance(duration, (int, np.integer)):
+        err_msg = f'\'duration\' must be an int or np.integer, not a {type(duration).__name__}'
         raise TypeError(err_msg)
     if duration < 1 or duration > 281474976710655:
         err_msg = f'\'duration\' out of range. Must be in range [1, 281474976710655]'
         raise ValueError(err_msg)
-    if not isinstance(goto_address, int):
-        err_msg = f'\'goto_address\' must be an int, not a {type(goto_address).__name__}'
+    if not isinstance(goto_address, (int, np.integer)):
+        err_msg = f'\'goto_address\' must be an int or np.integer, not a {type(goto_address).__name__}'
         raise TypeError(err_msg)
     if goto_address < 0 or goto_address > 8191:
         err_msg = f'\'goto_address\' out of range. Must be in must be range [0, 8191]'
         raise ValueError(err_msg)
-    if not isinstance(goto_counter, int):
-        err_msg = f'\'goto_counter\' must be an int, not a {type(goto_counter).__name__}'
+    if not isinstance(goto_counter, (int, np.integer)):
+        err_msg = f'\'goto_counter\' must be an int or np.integer, not a {type(goto_counter).__name__}'
         raise TypeError(err_msg)
     if goto_counter < 0 or goto_counter > 4294967295:
         err_msg = f'\'goto_counter\' out of range. Must be in range [0, 4294967295]'
@@ -865,7 +865,7 @@ def state_multiformat_to_int(state):
     encode_instruction : function which calls `state_multiformat_to_int`.
     encode_static_state : function which calls `state_multiformat_to_int`.
     """
-    if isinstance(state, int):
+    if isinstance(state, (int, np.integer)):
         if state < 0 or state > 16777215:
             err_msg = f'\'state\' out of range. If state is int, it must be in range [{bin(0)}, {bin(16777215)}]'
             raise ValueError(err_msg)
@@ -878,7 +878,7 @@ def state_multiformat_to_int(state):
             state_int += bool(value) << bit_idx
         state = state_int
     else:
-        err_msg = f'\'state\' must be an int, list, tuple or numpy.ndarray, not a {type(state).__name__}'
+        err_msg = f'\'state\' must be an int, np.integer, list, tuple or numpy.ndarray, not a {type(state).__name__}'
         raise TypeError(err_msg)
     return state
 
