@@ -178,26 +178,6 @@ def check_reset_output_coordinator(pg):
     pg.write_action(reset_output_coordinator=True)
     [print(key,':',value) for key, value in pg.get_state().items()]
 
-def check_stuff(pg):
-    #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    instr0 = ndpulsegen.transcode.encode_instruction(0,[1, 0],1,0,0, False, False, False)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,[1, 1],int(0.1/10E-9),0,0, False, False, False)
-    instr2 = ndpulsegen.transcode.encode_instruction(2,[1, 0],2,0,0, False, True, False)
-    instr3 = ndpulsegen.transcode.encode_instruction(3,[0, 0],3,0,0, False, False, False)
-    instructions = [instr0, instr1, instr2, instr3]
-    pg.write_instructions(instructions)
-
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=True)
-    # pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=False)
-    # [print(key,':',value) for key, value in pg.get_state().items()]
-
-    # There is some memory. when disableing, it stazys enabled for one extra run.
-
-    pg.write_action(trigger_now=True)
-    # [print(key,':',value) for key, value in pg.get_state().items()]
-    pg.read_all_messages(timeout=0.5)
-
-
 def test_disable_bit_by_bit(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=3, software_run_enable=True, notify_when_run_finished=True)
 
@@ -366,14 +346,53 @@ def check_powerline_instruction(pg):
     # pg.write_action(disable_after_current_run=True)
     pg.read_all_messages(timeout=0.1)
 
+def check_stuff(pg):
+    pg.write_action(reset_run=True)
+    #encode_instruction(address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
+    # instructions = [
+    #     ndpulsegen.transcode.encode_instruction(0, 1, [1, 0]),
+    #     ndpulsegen.transcode.encode_instruction(1, 1, [0, 0], 0, 1),
+    #     ndpulsegen.transcode.encode_instruction(2, 2, [1, 0]),
+    #     ndpulsegen.transcode.encode_instruction(3, 2, [0, 0], 2, 1),
+    #     ndpulsegen.transcode.encode_instruction(4, 1, [1, 0]),
+    #     ndpulsegen.transcode.encode_instruction(5, 6, [0, 0], 4, 1)
+    # ]
+    instructions = [
+        ndpulsegen.transcode.encode_instruction(0, 1, np.ones(24)),
+        ndpulsegen.transcode.encode_instruction(1, 1, np.zeros(24), 0, 0),
+        ndpulsegen.transcode.encode_instruction(2, 2, np.ones(24)),
+        ndpulsegen.transcode.encode_instruction(3, 2, np.zeros(24), 2, 1),
+        ndpulsegen.transcode.encode_instruction(4, 1, np.ones(24)),
+        ndpulsegen.transcode.encode_instruction(5, 6, np.zeros(24), 4, 1)
+    ]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=1, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # [print(key,':',value) for key, value in pg.get_state().items()]
+
+    # There is some memory. when disableing, it stazys enabled for one extra run.
+
+    pg.write_action(trigger_now=True)
+    # [print(key,':',value) for key, value in pg.get_state().items()]
+    kb = ndpulsegen.console_read.KBHit()
+    print('Press \'Esc\' to stop.')
+    while True:
+        if kb.kbhit():
+            input_character = kb.getch()
+            if input_character.encode() == chr(27).encode():
+                break
+    pg.write_action(disable_after_current_run=True)
+
+    pg.read_all_messages(timeout=0.5)
+
 if __name__ == "__main__":
 
     # print(help(ndpulsegen.transcode.encode_instruction))
     # print(help(ndpulsegen.transcode.encode_powerline_trigger_options))
-    # usb_port ='COM6'
+    usb_port ='COM6'
     # # usb_port ='tty.usbserial-FT3KRFFN0'
-    # pg = ndpulsegen.PulseGenerator(usb_port)
-    # assert pg.connect_serial()
+    pg = ndpulsegen.PulseGenerator(usb_port)
+    assert pg.connect_serial()
 
     # I NEED TO SEE WHAT HAPPENS IF THE 0TH INSTRUCTION HAS A POWERLINE_SYNC TAG. I THINK IT MIGHT START AUTOMATICALLY (yep, it does). THIS WOULD NOT
     # BE GOOD, BECAUSE IT MEANS THE RUN WOULD HAPPEN THE MOMENT THE INSTRUCTION IS LOADED. IT WOULDNT WAIT FOR A TRIGGER.
@@ -385,12 +404,12 @@ if __name__ == "__main__":
     # check_notify_when_finished(pg)
     # test_trig_source(pg)
     # test_software_enable(pg)
-    function_argument_validation(pg=None)
+    # function_argument_validation(pg=None)
     # test_disable_bit_by_bit(pg)
     # check_disable_after_current_run(pg)
     # check_get_state(pg)
     # check_reset_output_coordinator(pg)
-    # check_stuff(pg)
+    check_stuff(pg)
     # notify_when_finished(pg)
     # echo_terminal_characters(pg)
     # cause_invalid_receive(pg)
