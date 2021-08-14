@@ -4,7 +4,34 @@ import struct
 #########################################################
 # decode
 def decode_internal_error(message):
-    ''' Messagein identifier:  1 byte: 100
+    ''' 
+    Decodes an error type message. These errors all relate in some way to
+    communication from the host computer to the Pulse Gen. In the case of a 
+    'received_message_not_forwarded' error, the 'destination_subsystem' 
+    represents the subsystem of the Pulse Gen that was unable to unable to 
+    recieve the message due to a full internal queue.
+
+    Parameters
+    ----------
+    message : bytes
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
+
+    Returns
+    -------
+    dictionary
+        The decoded message containing what type of error occurred, and
+    additional information if the error is type received_message_not_forwarded.
+
+    See Also
+    --------
+
+    Notes
+    -----
+    Below is the bitwise layout of the encoded command. The FPGA INDEX
+    corresponds to the message bit index as written in Lucid HDL (hardware
+    design language).
+    Messagein identifier:  1 byte: 100
     Message format:                     BITS USED   FPGA INDEX.
     tags:               1 byte  [0]     2 bits      [0+:2]      unsigned int.
         invalid_identifier_received     1 bit       [0]
@@ -12,29 +39,85 @@ def decode_internal_error(message):
         received_message_not_forwarded  1 bit       [2]  
     error information:  1 byte  [1]     8 bits      [8+:8]     unsigned int.
 
-    The 'error_info' represents the "device_index" for the received message, which basically says where the meassage should have headed in the FPGA.
     '''
     tags, =         struct.unpack('<Q', message[0:1] + bytes(7))
     error_info, =   struct.unpack('<Q', message[1:2] + bytes(7))
     invalid_identifier_received_tag =       (tags >> 0) & 0b1        
     timeout_waiting_for_msg_tag =           (tags >> 1) & 0b1     
-    received_message_not_forwarded_tag =    (tags >> 2) & 0b1 
+    received_message_not_forwarded_tag =    (tags >> 2) & 0b1
+    if error_info in decode_lookup['error_info'].keys():
+        destination_subsystem = decode_lookup['error_info'][error_info]
+    else:
+        destination_subsystem = f'nonexistant_subsystem:{error_info}'
     invalid_identifier_received =       decode_lookup['invalid_identifier'][invalid_identifier_received_tag]
     timeout_waiting_for_msg =           decode_lookup['msg_receive_timeout'][timeout_waiting_for_msg_tag]
     received_message_not_forwarded =    decode_lookup['msg_not_forwarded'][received_message_not_forwarded_tag]
-    return {'invalid_identifier_received':invalid_identifier_received, 'timeout_waiting_to_receive_message':timeout_waiting_for_msg, 'received_message_not_forwarded':received_message_not_forwarded, 'error_info':error_info}
+    return {'invalid_identifier_received':invalid_identifier_received, 'timeout_waiting_to_receive_message':timeout_waiting_for_msg, 'received_message_not_forwarded':received_message_not_forwarded, 'destination_subsystem':destination_subsystem}
 
 def decode_easyprint(message):
-    ''' Messagein identifier:  1 byte: 102
+    ''' 
+    Decodes the easyprint type message. This is for developer use only. The 
+    easyprint command can only be emitted by with hard coded changes to the 
+    FPGA design.
+
+    Parameters
+    ----------
+    message : bytes
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
+
+    Returns
+    -------
+    str
+        The decoded binary digits of the message represented in a string
+
+    Notes
+    -----
+    Below is the bitwise layout of the encoded command. The FPGA INDEX
+    corresponds to the message bit index as written in Lucid HDL (hardware
+    design language).    
+    Messagein identifier:  1 byte: 102
     Message format:                     BITS USED   FPGA INDEX.
-    printed message:    8 bytes [0:3]   64 bits     [0+:64]     '''
+    printed message:    8 bytes [0:8]   64 bits     [0+:64]     '''
     binary_representation = []
     for letter in message[::-1]:
         binary_representation.append('{:08b} '.format(letter))
     return ''.join(binary_representation)
 
 def decode_devicestate(message):
-    ''' Messagein identifier:  1 byte: 103
+    ''' 
+    Decodes the devicestate type message, which contains most of the persistent
+    device settings, along with other information about the current state of the
+    device.
+
+    Parameters
+    ----------
+    message : bytes
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
+
+    Returns
+    -------
+    dictionary
+        The decoded message containing information about most persistent device 
+        settings, along with other information about the current state of the
+        device.
+
+    See Also
+    --------
+    encode_action : The function that encodes the command which causes the Pulse
+        Gen to emit a devicestate message.
+    encode_device_options : The function that encodes the command which sets
+        most persistent device settings.
+    decode_powerlinestate : The function that decodes settings and information 
+        relating to the powerline triggering.
+
+    Notes
+    -----
+    Below is the bitwise layout of the encoded command. The FPGA INDEX
+    corresponds to the message bit index as written in Lucid HDL (hardware
+    design language).
+    Messagein identifier:  1 byte: 103
     Message format:                     BITS USED   FPGA INDEX.
     output state:       3 bytes [0:3]   24 bits     [0+:24]     unsigned int. LSB=output 0
     final ram address:  2 bytes [3:5]   16 bits     [24+:16]    unsigned int.
@@ -79,25 +162,29 @@ def decode_devicestate(message):
 
 def decode_powerlinestate(message):
     ''' 
-    Decodes the powerlinestate type message.
+    Decodes the powerlinestate type message which contains information about 
+    global powerline triggering settings, and information about the current
+    powerline period.
 
     Parameters
     ----------
     message : bytes
-        The encoded bytes sent by the Pulse Dev
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
 
     Returns
     -------
     dictionary
-        The decoded message containing the echoed byte and device information.
-
-    Raises
-    ------
+        The decoded message containing information about global powerline
+        triggering settings, and information about the current powerline period.
 
     See Also
     --------
-    encode_echo : The function that encodes the command which causes this 
-    message to be emitted.
+    encode_action : The function that encodes the command which causes the Pulse
+        Gen to emit a powerlinestate message.
+    encode_powerline_trigger_options : The function that encodes the command
+        which sets the global powerline triggering options.
+
 
     Notes
     -----
@@ -123,12 +210,15 @@ def decode_powerlinestate(message):
 
 def decode_notification(message):
     ''' 
-    Decodes the notification type message.
+    Decodes the notification type message, which contains information about what
+    caused the notification, and what instruction address the devide was reading 
+    at the time.
 
     Parameters
     ----------
     message : bytes
-        The encoded bytes sent by the Pulse Dev
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
 
     Returns
     -------
@@ -136,15 +226,12 @@ def decode_notification(message):
         The decoded message containing information about what caused the Pulse 
         Gen to emit a notification.
 
-    Raises
-    ------
-
     See Also
     --------
     encode_instruction : The function that encodes instructions, which can be
-    set to emit notifications.
-    encode_device_options : The function that device_settings, which can be to 
-    cause the Pulse Gen to emit notifications.
+        set to emit notifications.
+    encode_device_options : The function that encodes device_settings, which can
+        cause the Pulse Gen to emit notifications.
 
     Notes
     -----
@@ -171,25 +258,24 @@ def decode_notification(message):
 
 def decode_serialecho(message):
     '''
-    Decodes the serioalecho type message.
+    Decodes the serialecho type message, which contains an echoed byte and 
+    device version information.
 
     Parameters
     ----------
     message : bytes
-        The encoded bytes sent by the Pulse Dev
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
 
     Returns
     -------
     dictionary
         The decoded message containing the echoed byte and device information.
 
-    Raises
-    ------
-
     See Also
     --------
     encode_echo : The function that encodes the command which causes this 
-    message to be emitted.
+        message to be emitted.
 
     Notes
     -----
@@ -237,7 +323,7 @@ def encode_echo(byte_to_echo):
     See Also
     --------
     decode_serialecho : The function that decodes the message that the Pulse Gen
-    sends in resopnse to command generated with `encode_echo`
+        sends in resopnse to command generated with `encode_echo`
 
     Notes
     -----
@@ -327,7 +413,6 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     powerline_trigger_delay =   struct.pack('<Q', powerline_trigger_delay)[:3]
     tags =                      struct.pack('<Q', tags)[:1]
     return message_identifier + powerline_trigger_delay + tags
-
 
 def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
     """ 
@@ -422,7 +507,7 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
     --------
     encode_instruction : The function that encodes the timing instructions of
         the Pulse Gen.
-    encode_action : The function that encodes commands that induce one off
+    encode_action : The function that encodes commands that induce one-off
         effects on the Pulse Gen.
     encode_powerline_trigger_options : The function that encodes the global
         settings of the Pulse Gen which relate to powerline synchronisation.
@@ -913,7 +998,8 @@ decode_lookup = {
     'finished_notify':{1:True, 0:False},
     'invalid_identifier':{1:True, 0:False},
     'msg_not_forwarded':{1:True, 0:False},
-    'msg_receive_timeout':{1:True, 0:False}
+    'msg_receive_timeout':{1:True, 0:False},
+    'error_info':{1:'echo', 2:'load_instruction', 3:'action', 4:'debug', 5:'device_settings', 6:'set_static_state', 7:'powerline_trigger_settings'},
     }
 
 msgout_identifier = {
