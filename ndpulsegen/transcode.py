@@ -2,14 +2,14 @@ import numpy as np
 import struct
 
 #########################################################
-# decode
+# decodes
 def decode_internal_error(message):
     ''' 
     Decodes an error type message. These errors all relate in some way to
     communication from the host computer to the Pulse Gen. In the case of a 
     'received_message_not_forwarded' error, the 'destination_subsystem' 
-    represents the subsystem of the Pulse Gen that was unable to unable to 
-    recieve the message due to a full internal queue.
+    represents the subsystem of the Pulse Gen that was unable to recieve the
+    message due to a full internal queue.
 
     Parameters
     ----------
@@ -57,8 +57,8 @@ def decode_internal_error(message):
 def decode_easyprint(message):
     ''' 
     Decodes the easyprint type message. This is for developer use only. The 
-    easyprint command can only be emitted by with hard coded changes to the 
-    FPGA design.
+    easyprint command can only be emitted with hard coded changes to the FPGA
+    design.
 
     Parameters
     ----------
@@ -211,7 +211,7 @@ def decode_powerlinestate(message):
 def decode_notification(message):
     ''' 
     Decodes the notification type message, which contains information about what
-    caused the notification, and what instruction address the devide was reading 
+    caused the notification, and what instruction address the device was reading 
     at the time.
 
     Parameters
@@ -304,7 +304,7 @@ def encode_echo(byte_to_echo):
     byte_to_echo : bytes
         The byte to be sent to the Pulse Gen, which it will then echo. Must be
         of type bytes, with lenght=1. The byte does not need to be printable, it
-        may have any binary number between 0b00000000 and 0b11111111.
+        may have any binary value between 0b00000000 and 0b11111111 inclusive.
 
     Returns
     -------
@@ -360,7 +360,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
         powerline_trigger. A powerline_trigger pulse is emitted every time the 
         mains AC line crosses 0 volts in a positive direction, with a delay
         added specified by `powerline_trigger_delay`.
-    powerline_trigger_delay : int, optional
+    powerline_trigger_delay : int, optional 
         `powerline_trigger_delay` ∈ [0, 4194303].
         The delay between the mains AC line crossing 0 volts in a positive
         direction, and the emission of a powerline_trigger.        
@@ -428,16 +428,15 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         The address of the final instruction that is executed in a run. After
         this instruction has completed, the run will stop or restart, depending
         on the `run_mode` setting.
-    run_mode : str, optional
-        `run_mode` ∈ ('single', 'continuous')
+    run_mode : {'single', 'continuous'}, optional
         After completing of the instruction specified by `final_ram_address`,
         if `run_mode`='single' the device will immediately stop counting down to
         the next instruction, and all channels will retain the output state of
         the final instruction. If `run_mode`=='continuous', after the last cycle
         of the final instruction, the device will immediately execute the
         instruction at address 0, and the entire run will begin again.
-    trigger_source : str, optional
-        `trigger_source` ∈ ('software', 'hardware', 'either', 'single_hardware')
+    trigger_source : {'software', 'hardware', 'either', 'single_hardware'}, 
+            optional
         Controls the accecpted source of input triggers that start or restart a
         run. If `trigger_source`='software', then all hardware input trigger
         signals are ignored, and the input trigger can only be activated using a
