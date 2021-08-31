@@ -15,11 +15,11 @@ def random_sequence(seed=0):
     np.random.seed(seed=seed)   #Seed it so the sequence is the same every time i run it.
 
     instruction_num = 1000
-    states = np.empty((instruction_num, 24), dtype=np.int)
+    states = np.empty((instruction_num, 24), dtype=int)
     instructions = []
     # durations = 1 + np.random.poisson(lam=1, size=instruction_num)
     # durations = np.random.randint(1, high=5, size=instruction_num, dtype=int)  
-    durations = 1+np.round(np.random.f(3, 2, instruction_num)).astype(np.int)
+    durations = 1+np.round(np.random.f(3, 2, instruction_num)).astype(int)
 
     # I want a low probablility that any given instruction actually does loop back to an earlier address, but if it does, I want it to do it more than just once ()
     go_to_probablility = 0.1
@@ -33,7 +33,7 @@ def random_sequence(seed=0):
 
     for ram_address, (duration, goto_address, goto_counter) in enumerate(zip(durations, goto_addresses, goto_counters)):
         if ram_address == instruction_num-1:
-            # state = np.zeros(24, dtype=np.int)   #just makes them all go low in theyre final state (helps with triggering off a single pulse)
+            # state = np.zeros(24, dtype=int)   #just makes them all go low in theyre final state (helps with triggering off a single pulse)
             pass
         else:
             state = np.random.randint(0, high=2, size=24, dtype=int)         
@@ -102,7 +102,7 @@ def simulate_output_coordinator(instructions):
         else:
             instruction['goto_counter'] -= 1
             address = instruction['goto_address']
-    return np.array(durations, dtype=np.int), np.array(states, dtype=np.int), np.array(instruction_address, dtype=np.int), np.array(goto_counter, dtype=np.int), np.array(goto_counter_original, dtype=np.int), np.array(stop_and_wait, dtype=np.bool), np.array(hard_trig_out, dtype=np.bool), np.array(notify_computer, dtype=np.bool), np.array(powerline_sync, dtype=np.bool)
+    return np.array(durations, dtype=int), np.array(states, dtype=int), np.array(instruction_address, dtype=int), np.array(goto_counter, dtype=int), np.array(goto_counter_original, dtype=int), np.array(stop_and_wait, dtype=bool), np.array(hard_trig_out, dtype=bool), np.array(notify_computer, dtype=bool), np.array(powerline_sync, dtype=bool)
 #####################################################################################################################
 
 def t2n(t):
@@ -161,10 +161,10 @@ def construct_state_line_segments(t, state, yval):
     for current_t, current_state in zip(t, state):
         if last_state == 0 and current_state == 1:
             #put the first point of the high segment
-            segments[seg_idx, 0, :] = np.float(current_t), yval
+            segments[seg_idx, 0, :] = np.float64(current_t), yval
         if last_state == 1 and current_state == 0:
             #put the last point of the high segment
-            segments[seg_idx, 1, :] = np.float(current_t), yval
+            segments[seg_idx, 1, :] = np.float64(current_t), yval
             seg_colors[seg_idx] = high_color
             seg_idx += 1
         last_state = current_state
@@ -173,8 +173,8 @@ def construct_state_line_segments(t, state, yval):
 
 # @jit(nopython=True, cache=True)
 def construct_instruction_spacing_line_segments(t, ymin=0.0, ymax=1.1):
-    ymin = np.float(ymin)
-    ymax = np.float(ymax)
+    ymin = np.float64(ymin)
+    ymax = np.float64(ymax)
     segments = np.empty((t.size, 2, 2))
     seg_idx = 0
     # t = t.astype(np.float64)
