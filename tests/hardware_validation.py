@@ -14,12 +14,12 @@ from pylab import *
 
 def software_trig(pg):
     # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    instr0 = ndpulsegen.transcode.encode_instruction(0,0b100000000000000011111111,1,0,0, False, False, False) #note: The auto_trig_on_powerline tag has been omitted from modt examples. It defaults to False.
-    instr1 = ndpulsegen.transcode.encode_instruction(1,0b000000000000000010101010,1,0,0, False, False, False)
-    instr2 = ndpulsegen.transcode.encode_instruction(2,0b100000000000000000001111,2,0,0, False, False, False)
-    instr3 = ndpulsegen.transcode.encode_instruction(3,0b0,3,0,0, False, False, False)
+    instr0 = ndpulsegen.transcode.encode_instruction(0,1,0b100000000000000011111111) #note: The auto_trig_on_powerline tag has been omitted from modt examples. It defaults to False.
+    instr1 = ndpulsegen.transcode.encode_instruction(1,1,0b000000000000000010101010)
+    instr2 = ndpulsegen.transcode.encode_instruction(2,2,0b100000000000000000001111)
+    instr3 = ndpulsegen.transcode.encode_instruction(3,3,0b0)
     pg.write_instructions([instr0, instr1, instr3, instr2])
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
@@ -28,10 +28,10 @@ def simple_sequence(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instructions = []
     for ram_address in range(0, 8192, 2):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,[1, 1],1,0,0, False, False, False))
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,[0, 0],1,0,0, False, False, False))
+        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,1,[1, 1]))
+        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,1,[0, 0]))
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
@@ -117,10 +117,10 @@ def random_sequence(pg, seed=19870909):
         else:
             state = np.random.randint(0, high=2, size=24, dtype=int)         
         states[ram_address, :] = state
-        instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, state=state, duration=duration, goto_address=goto_address, goto_counter=goto_counter))
+        instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, duration=duration, state=state, goto_address=goto_address, goto_counter=goto_counter))
 
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address, run_mode='single', trigger_mode='software', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_ram_address=ram_address, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
 
     # This is all I had to add to incorporate the pulsegen emulator. But if i want it to do anything, I need to add goto's and goto counters
     decoded_instructions = decode_instructions(instructions)
@@ -249,8 +249,8 @@ if __name__ == "__main__":
     # scope.default_setup(Ch1=True, Ch2=False, pre_trig_record=0.5E-6)
 
     # setup_scope(scope, Ch1=False, Ch2=True, pre_trig_record=10E-6)
-    setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=10E-6)
-    # setup_scope(scope, Ch1=True, Ch2=True, pre_trig_record=10E-6)
+    # setup_scope(scope, Ch1=True, Ch2=False, pre_trig_record=10E-6)
+    setup_scope(scope, Ch1=True, Ch2=True, pre_trig_record=10E-6)
 
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial()
@@ -268,8 +268,8 @@ if __name__ == "__main__":
     '''
     scope_channels = [1, 2]
     pulsegen_channels = [0, 1]
-    scope_channels = [1]
-    pulsegen_channels = [0]
+    # scope_channels = [1]
+    # pulsegen_channels = [0]
 
 
     transition_number_errors = 0
@@ -283,6 +283,7 @@ if __name__ == "__main__":
     trial = 0
     # for trial in range(11):
     while trial < 10:
+    # while trial < 1:
         rand_seed = incrementing_seed+seed_salt
         incrementing_seed += 1
 
