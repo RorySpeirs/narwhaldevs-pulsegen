@@ -385,6 +385,73 @@ def check_stuff(pg):
 
     pg.read_all_messages(timeout=0.5)
 
+def simple_test(pg):
+    state = np.ones(24)
+    # state = np.zeros(24)
+    # state[17] = 1
+    instructions = [
+        ndpulsegen.transcode.encode_instruction(0, 3, state),
+        ndpulsegen.transcode.encode_instruction(1, 3, np.zeros(24)),
+        ndpulsegen.transcode.encode_instruction(2, 2, np.ones(24)),
+        ndpulsegen.transcode.encode_instruction(3, 2, np.zeros(24)),
+        ndpulsegen.transcode.encode_instruction(4, 1, np.ones(24)),
+        ndpulsegen.transcode.encode_instruction(5, 6, np.zeros(24))
+    ]
+    pg.write_instructions(instructions)
+    pg.write_device_options(final_ram_address=1, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_action(trigger_now=True)
+
+    [print(key,':',value) for key, value in pg.get_state().items()]
+
+    kb = ndpulsegen.console_read.KBHit()
+    print('Press \'Esc\' to stop.')
+    while True:
+        if kb.kbhit():
+            input_character = kb.getch()
+            if input_character.encode() == chr(27).encode():
+                break
+    pg.write_action(disable_after_current_run=True)
+    pg.read_all_messages(timeout=0.5)
+    # [print(key,':',value) for key, value in pg.get_state().items()]
+
+
+def pcb_connection_check(pg):
+     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
+
+    chans = np.arange(24)
+    instructions = []
+    # for idx, time in enumerate(np.arange(25)):
+    for idx, time in enumerate(np.arange(25)[::-1]):
+        vals = chans<time
+        vals = vals[::-1]
+        print(idx)
+        print(vals)
+        print()
+        instructions.append(ndpulsegen.transcode.encode_instruction(idx, 1, vals))
+
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=24, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_action(trigger_now=True)
+    kb = ndpulsegen.console_read.KBHit()
+    print('Press \'Esc\' to stop.')
+    while True:
+        if kb.kbhit():
+            input_character = kb.getch()
+            if input_character.encode() == chr(27).encode():
+                break
+    pg.write_action(disable_after_current_run=True)
+    pg.read_all_messages(timeout=0.5)
+
+    
+    # 6 is a dry joint at output of buffer
+    # suspect 15 is a dry joint on alchitry connector. confirm by sandwitching a breakout bewteen and witing up corresponding connector.
+    # power connector is shit. Get a different kind, or maybe try vertical, it looks like there is room.
+    # need to solder ~3.5kOhm between trig in and gnd, and run enable in and 3.3v
+    # need to test clock in and mains AC in.
+
+
+
 if __name__ == "__main__":
 
     # print(help(ndpulsegen.transcode.encode_instruction))
@@ -400,6 +467,8 @@ if __name__ == "__main__":
 
     # NOPE. i CANT USE RUN ACTIVE. THIS IS A HARDER PROBLEM THAN i THOUTGHT.
 
+    # simple_test(pg)
+    pcb_connection_check(pg)
     # check_powerline_instruction(pg)
     # check_notify_when_finished(pg)
     # test_trig_source(pg)
@@ -409,7 +478,7 @@ if __name__ == "__main__":
     # check_disable_after_current_run(pg)
     # check_get_state(pg)
     # check_reset_output_coordinator(pg)
-    check_stuff(pg)
+    # check_stuff(pg)
     # notify_when_finished(pg)
     # echo_terminal_characters(pg)
     # cause_invalid_receive(pg)
