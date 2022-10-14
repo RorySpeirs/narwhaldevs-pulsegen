@@ -396,7 +396,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     '''
     # Type and value checking
     if isinstance(powerline_trigger_delay, (int, np.integer)):
-        update_powerline_trigger_delay_tag = 1 << 7
+        update_powerline_trigger_delay_tag = 1 << 0
         if powerline_trigger_delay < 0 or powerline_trigger_delay > 4194303:
             err_msg = f'\'powerline_trigger_delay\' out of range. Must be in must be range [0, 4194303]'
             raise ValueError(err_msg)
@@ -598,7 +598,7 @@ def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=
         trigger_on_powerline is set, the recieved software trigger will arm
         the run, which will start on reciept of the next powerline_trigger.
     disable_after_current_run : bool, optional
-        If True, and the setting `run_mode`='continuous', and a run is currently
+        If True, AND the setting `run_mode`='continuous', AND a run is currently
         active, then the device will disable the run after completion of the 
         final timing instruction. The run is considered active even if the
         counters are paused due to a timing instruction containing a 
