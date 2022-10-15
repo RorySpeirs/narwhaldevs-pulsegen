@@ -1,6 +1,6 @@
 import numpy as np
 import struct
-import time as systime
+import time
 
 import sys
 import os
@@ -21,7 +21,7 @@ def echo_terminal_characters(pg):
         if all_messages:
             for message in all_messages: 
                 print(message['echoed_byte'].decode(errors='replace'))
-        systime.sleep(0.01)
+        time.sleep(0.01)
     kb.set_normal_term()
 
 def cause_invalid_receive(pg):
@@ -53,8 +53,78 @@ def cause_timeout_on_message_forward(pg):
 
     pg.write_instructions(instructions)
     pg.read_all_messages(timeout=0.5)
-    systime.sleep(1)
+    time.sleep(1)
     pg.write_action(disable_after_current_run=True)
+
+
+
+def fully_load_ram_test(pg):
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instructions = []
+    for ram_address in range(0, 8192, 2):
+        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address, 1, [1, 1, 1]))
+        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1, 1, [0, 0, 0]))
+
+    tstart = time.time()
+    pg.write_instructions(instructions)
+    tend = time.time()
+
+    time_total = tend-tstart
+    print('Time required to load the RAM FULL of instructions = {:.2f} ms \nWhich is {:.2f} instructions/ms \nOr {:.2f} μs/instruction '.format(time_total*1E3, (ram_address+1)/(time_total*1E3), (time_total*1E6)/(ram_address+1)))
+
+    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_action(trigger_now=True)
+    pg.read_all_messages(timeout=1)
+
+
+
+def test_notifications(pg):
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
+    # pg.write_action(reset_output_coordinator=True)
+    instructions = []
+    # instruction_number = 512
+    instruction_number = 5
+
+    for ram_address in range(0, instruction_number):
+        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address, 1, [1, 1, 1], notify_computer=True))
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=instruction_number-1, run_mode='single', trigger_source='software', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+
+    pg.write_action(trigger_now=True)
+    pg.read_all_messages(timeout=2)
+
+
+def pcb_connection_check(pg):
+     #address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    states = []
+    state = np.ones(24)
+    for idx in range(1, 25):
+        state[:idx] = 0
+        states.append(state.copy())
+    states[0][0] = 1
+    states[2][0] = 1
+
+    instructions = []
+    for idx, state in enumerate(states):
+        # print(state)
+        instructions.append(ndpulsegen.transcode.encode_instruction(idx, 1, state))
+
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=23, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_action(trigger_now=True)
+    kb = ndpulsegen.console_read.KBHit()
+    print('Press \'Esc\' to stop.')
+    while True:
+        if kb.kbhit():
+            input_character = kb.getch()
+            if input_character.encode() == chr(27).encode():
+                break
+    pg.write_action(disable_after_current_run=True)
+    pg.read_all_messages(timeout=0.5)
+
 
 def print_bytes(bytemessage):
     print('Message:')
@@ -63,70 +133,38 @@ def print_bytes(bytemessage):
     print('')
 
 
-
-def check_disable_after_current_run(pg):
-    pg.write_action(reset_run=True)
+def current_address_problem(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 0], stop_and_wait=True)
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 1, [1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0])
+    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
+    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
+    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
+    instr3 = ndpulsegen.transcode.encode_instruction(3, 200000000000, [0, 0, 0])
+
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    
 
-    pg.write_device_options(final_ram_address=1, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
-
-
-    '''The desired behaviour is that the notification will only occour in continuous mode when the output coordinator is DISABLED!!!!!! Not at the end of every single loop.
-    This is different to the notify on main trigger, which I do want to notify on each and every main trigger, even in continuous mode. It might seem a somewhat arbitrary 
-    distinction, but ultimately, I see it as a useful way that an experimenter might want information about what is going on with their experiment.
-    '''
-    [print(key,':',value) for key, value in pg.get_state().items()]
+    '''Testing the get state notification'''
     pg.write_action(trigger_now=True)
-    # pg.return_on_notification(finished=True, timeout=1)
-    pg.read_all_messages(timeout=1)
-    [print(key,':',value) for key, value in pg.get_state().items()]
-    # success = 0
-    # for a in range(1, 501):
-    #     if np.mod(a, 100) == 0:
-    #         print(f'test {a}')
-    #     pg.write_action(trigger_now=True)
-    #     pg.write_action(trigger_now=True)
-    #     # systime.sleep(0.5)
-
-    #     pg.write_action(disable_after_current_run=True)
-    #     if pg.return_on_notification(finished=True, timeout=0.1):
-    #         success += 1
-    # print(f'success rate = {success}/{a}. or {success/a*100:.02f}%')
+    [print(key,':',value) for key, value in pg.get_state().items() if key in ['current_address', 'state']]
+    pg.write_action(disable_after_current_run=True)
 
 
-def check_powerline_instruction(pg):
-    '''This will keep failing until I cnage the hardware. I can't have powerline_sync on the zeroth instruction'''
-    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
-    instr0 = ndpulsegen.transcode.encode_instruction(0,500000,[1, 0], powerline_sync=True)
-    instr1 = ndpulsegen.transcode.encode_instruction(1,100000,[0, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2,200000,[1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3,1,[0, 0])
-    instructions = [instr0, instr1, instr2, instr3]
+'''Ok, so this is the behaviour on the whole.
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+current next    result
+1       1       correct
+1       2       correct
+2       1       correct or "current_address" ahead by one (dependent on request arrival time)
+2       2       correct or "current_address" ahead by one (dependent on request arrival time)
 
-    pg.write_powerline_trigger_options(trigger_on_powerline=False)
+Bottom line: it seems like it should be easy to sync up the output state, with the address that state is from. 
+            But actually, it is a very hard problem. It is not worth it at the moment. 
+            Just don't highlight its existance.
 
-    pg.write_instructions(instructions)
-    pg.write_action(trigger_now=True)
-
-    # kb = ndpulsegen.console_read.KBHit()
-    # print('Press \'Esc\' to stop.')
-    # while True:
-    #     if kb.kbhit():
-    #         input_character = kb.getch()
-    #         if input_character.encode() == chr(27).encode():
-    #             break
-    # pg.write_action(disable_after_current_run=True)
-    pg.read_all_messages(timeout=0.1)
-
+'''
 
 
 
@@ -137,17 +175,34 @@ if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator(usb_port)
     assert pg.connect_serial()
 
-    # I NEED TO SEE WHAT HAPPENS IF THE 0TH INSTRUCTION HAS A POWERLINE_SYNC TAG. I THINK IT MIGHT START AUTOMATICALLY (yep, it does). THIS WOULD NOT
-    # BE GOOD, BECAUSE IT MEANS THE RUN WOULD HAPPEN THE MOMENT THE INSTRUCTION IS LOADED. IT WOULDNT WAIT FOR A TRIGGER.
-    # I COULD POTENTIALLY USE THE RUN_ACTIVE SETTING THAT I JUST MADE TO GET AROUND THIS.
-    # NOPE. i CANT USE RUN ACTIVE. THIS IS A HARDER PROBLEM THAN i THOUTGHT.
 
-    # check_powerline_instruction(pg)
-    check_disable_after_current_run(pg)
+
     # echo_terminal_characters(pg)
     # cause_invalid_receive(pg)
     # cause_timeout_on_receive(pg)
     # cause_timeout_on_message_forward(pg)
+    # fully_load_ram_test(pg)                  
+    # test_notifications(pg)
+    # pcb_connection_check(pg)
+    # current_address_problem(pg)
+
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
     # print_bytes(instruction)
+
+
+'''
+Possible bugs/less than ideal behaviour
+    Get state: the current_address is not the address being output, but the next address to be output. See current_address_problem
+
+
+
+Things to implement:
+    Serial number. 
+        Give each board a serial number, or have it get it directly frim the xilinx chip
+        Actually. Put this info in the Flash chip. That way I don't have to touch the FPGA design.
+
+    Breakout Flash chip
+        Save and recover static state form chip.
+        Recover serial number on turn on.
+'''

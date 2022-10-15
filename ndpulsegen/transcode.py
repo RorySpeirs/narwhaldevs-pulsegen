@@ -158,7 +158,7 @@ def decode_devicestate(message):
     software_run_enable =       decode_lookup['software_run_enable'][software_run_enable_tag]
     hardware_run_enable =       decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
     notify_on_run_finished =    decode_lookup['notify_on_run_finished'][notify_on_run_finished_tag]
-    return {'state:':state, 'final_ram_address':final_ram_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'trigger_source':trigger_source, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_out_length':trigger_out_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
+    return {'state':state, 'final_ram_address':final_ram_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'trigger_source':trigger_source, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_out_length':trigger_out_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address_approx':current_ram_address}
 
 def decode_powerlinestate(message):
     ''' 
@@ -894,6 +894,10 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
         raise TypeError(err_msg)
     if goto_counter < 0 or goto_counter > 4294967295:
         err_msg = f'\'goto_counter\' out of range. Must be in range [0, 4294967295]'
+        raise ValueError(err_msg)
+    # Other consistancy checking
+    if address == 0 and powerline_sync:
+        err_msg = f'Instruction at address=0 cannot have powerline_sync=True. The run would start automatically. See examples.py for workaround.'
         raise ValueError(err_msg)
     # Tag arguments are not explicitly validated. Errors are caught in the dictionary lookup
     state = state_multiformat_to_int(state)

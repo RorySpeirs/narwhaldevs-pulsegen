@@ -317,7 +317,7 @@ def powerline_test_global_setting(pg):
     pg.write_powerline_trigger_options(trigger_on_powerline=False) #Remember, this is a device setting, so it persists until you change it
 
 
-def powerline_test_instruction_tag_single_run(pg):
+def powerline_sync_instruction_single_run(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
     instr0 = ndpulsegen.transcode.encode_instruction(0, 100000, [1, 1, 1])
     instr1 = ndpulsegen.transcode.encode_instruction(1, 100000, [0, 1, 0], stop_and_wait=True)
@@ -332,10 +332,19 @@ def powerline_test_instruction_tag_single_run(pg):
 
     pg.write_action(trigger_now=True)
 
-def powerline_test_instruction_tag_continuous_run(pg):
-    '''Note that currently, instruction 0 cannot contain powerline_sync=True. So you have to make a "dummy instruction" before it (best to just clone the final instruction)'''
+def powerline_sync_instruction_continuous_run(pg):
+    '''
+    Instruction 0 cannot contain powerline_sync=True. If it did, the run would start automatically on the first AC line
+    rise after that instruction was loaded, even if the remainging instructions were not in place.
+    If you want a run to loop continuously, but sync with the powerline at the start of every run, the best option is to do
+    the following:
+        Make a "dummy instruction" at address=0, with stop_and_wait=True.
+        Copy the state of the final instruction into instruction 0, and set the duration to a single clock cycle.
+        In this way, instruction at address=0 behaves like part of the final instruction, and the instruction at
+        address=1 effectively becomes the "first" instruction.
+         '''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    clone_instr3 = ndpulsegen.transcode.encode_instruction(0, 300000, [0, 0, 0], stop_and_wait=True)
+    clone_instr3 = ndpulsegen.transcode.encode_instruction(0, 1, [0, 0, 0], stop_and_wait=True)
     instr0 = ndpulsegen.transcode.encode_instruction(1, 100000, [1, 1, 1], powerline_sync=True)
     instr1 = ndpulsegen.transcode.encode_instruction(2, 100000, [0, 1, 0])
     instr2 = ndpulsegen.transcode.encode_instruction(3, 200000, [1, 1, 0])
@@ -349,26 +358,6 @@ def powerline_test_instruction_tag_continuous_run(pg):
     pg.write_action(trigger_now=True)
     time.sleep(5)
     pg.write_action(disable_after_current_run=True)
-
-
-def fully_load_ram_test(pg):
-    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instructions = []
-    for ram_address in range(0, 8192, 2):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address, 1, [1, 1, 1]))
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1, 1, [0, 0, 0]))
-
-    tstart = time.time()
-    pg.write_instructions(instructions)
-    tend = time.time()
-
-    time_total = tend-tstart
-    print('Time required to load the RAM FULL of instructions = {:.2f} ms \nWhich is {:.2f} instructions/ms \nOr {:.2f} μs/instruction '.format(time_total*1E3, (ram_address+1)/(time_total*1E3), (time_total*1E6)/(ram_address+1)))
-
-    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_action(trigger_now=True)
-    pg.read_all_messages(timeout=1)
-
 
 def put_into_and_recover_from_erroneous_state(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False\
@@ -420,63 +409,11 @@ def put_into_and_recover_from_erroneous_state(pg):
     update and given setting/instruction.
     '''
 
-def test_notifications(pg):
-    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
-    # pg.write_action(reset_output_coordinator=True)
-    instructions = []
-    # instruction_number = 512
-    instruction_number = 5
-
-    for ram_address in range(0, instruction_number):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address, 1, [1, 1, 1], notify_computer=True))
-    pg.write_instructions(instructions)
-
-    pg.write_device_options(final_ram_address=instruction_number-1, run_mode='single', trigger_source='software', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
-
-    pg.write_action(trigger_now=True)
-    pg.read_all_messages(timeout=2)
-
-
-def pcb_connection_check(pg):
-     #address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    states = []
-    state = np.ones(24)
-    for idx in range(1, 25):
-        state[:idx] = 0
-        states.append(state.copy())
-    states[0][0] = 1
-    states[2][0] = 1
-
-    instructions = []
-    for idx, state in enumerate(states):
-        # print(state)
-        instructions.append(ndpulsegen.transcode.encode_instruction(idx, 1, state))
-
-    pg.write_instructions(instructions)
-
-    pg.write_device_options(final_ram_address=23, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_action(trigger_now=True)
-    kb = ndpulsegen.console_read.KBHit()
-    print('Press \'Esc\' to stop.')
-    while True:
-        if kb.kbhit():
-            input_character = kb.getch()
-            if input_character.encode() == chr(27).encode():
-                break
-    pg.write_action(disable_after_current_run=True)
-    pg.read_all_messages(timeout=0.5)
 
 #Make program run now...
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial(), 'Could not connect to PulseGenerator. Check it is plugged in and FTDI VCP drivers are installed'
-    # testing(pg)
-
-
-    '''If there is a bug, this will probably reset things and the device should work again.
-    Try to remember all the details about how the bug arose, and replicate it straight away if you can.'''
-    # pg.write_action(reset_output_coordinator=True)
 
     '''These give an introduction on how to program the device, and what capabilities it has'''
     software_trig(pg)
@@ -495,40 +432,16 @@ if __name__ == "__main__":
     # using_loops_normally(pg)
     # using_loops_advanced(pg)
     # powerline_test_global_setting(pg)
-    # powerline_test_instruction_tag_single_run(pg)
-    # powerline_test_instruction_tag_continuous_run(pg) #A little dodgy. See bug. But I have already been through that.
-
-    '''These are some useful tests that I used while developing, and demonstrate some
-    features like communication errors'''
-    # fully_load_ram_test(pg)                  
+    # powerline_sync_instruction_single_run(pg)
+    # powerline_sync_instruction_continuous_run(pg)
     # put_into_and_recover_from_erroneous_state(pg)  
-    # test_notifications(pg)
-    # pcb_connection_check(pg)
 
 
 '''
-Possible bugs/less than ideal behaviour
-    Instruction 0 cannot contain powerline_sync=True. Either fix in hardware (difficult), or throw an error/warning when creating this instruction.
-
-    Get state: the current_address is not the address being output, but the next address to be output. Maybe ok.
-
-    Check behavious of disable_after_current_run action. It is in the testing folder. I don't know what I was testing, but it looks like the device retains a memory that I don't understand. Which is not good.
-
 Possible examples to do:
-    Show use of software_run_enable setting. This didn't used to be a setting, but now it is.
-
     show reprogramming on the fly (while running).
-
-Things to implement:
-    change all the message identifiers to non-printable ascii characters. This makes it less likely that the device will do anything at all if somebody accidently connects to it with a serial terminal
-
-    Implement some instruction validity checking.
-        no countdown of 0, is address in range, etc. IMPORTANT!!!!! DO NOT enter instructions with a duration value of 0. This will put the device into an erronious state!
-
-    Serial number. 
-        Give each board a serial number, or have it get it directly frim the xilinx chip
-
-
 '''
+
+
 
 
