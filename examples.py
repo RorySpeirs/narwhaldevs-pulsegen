@@ -410,13 +410,29 @@ def put_into_and_recover_from_erroneous_state(pg):
     '''
 
 
+def quick_test(pg):
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
+    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
+    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
+    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_action(trigger_now=True)
+
+
 #Make program run now...
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
     assert pg.connect_serial(), 'Could not connect to PulseGenerator. Check it is plugged in and FTDI VCP drivers are installed'
 
     '''These give an introduction on how to program the device, and what capabilities it has'''
-    software_trig(pg)
+
+    quick_test(pg)
+
+    # software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
