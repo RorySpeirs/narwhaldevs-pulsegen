@@ -169,8 +169,8 @@ def notify_when_finished(pg):
     pg.write_action(trigger_now=True)
     pg.write_action(disable_after_current_run=True)
 
-    # print(pg.return_on_notification(finished=True, timeout=5))
-    pg.return_on_notification(finished=True, timeout=5)
+    print(pg.return_on_notification(finished=True, timeout=5))
+    # pg.return_on_notification(finished=True, timeout=5)
 
 def notify_on_specific_instructions(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
@@ -430,7 +430,7 @@ if __name__ == "__main__":
 
     '''These give an introduction on how to program the device, and what capabilities it has'''
 
-    quick_test(pg)
+    # quick_test(pg)
 
     # software_trig(pg)
     # hardware_trig(pg)

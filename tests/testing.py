@@ -106,6 +106,14 @@ def pcb_connection_check(pg):
     states[0][0] = 1
     states[2][0] = 1
 
+    '''
+    0: 1, 0, 1, 0...
+    1: 1, 0...
+    2: 1, 1, 0...
+    3: 1, 1, 1, 0...
+    ...
+    '''
+
     instructions = []
     for idx, state in enumerate(states):
         # print(state)
@@ -183,7 +191,7 @@ if __name__ == "__main__":
     # cause_timeout_on_message_forward(pg)
     # fully_load_ram_test(pg)                  
     # test_notifications(pg)
-    # pcb_connection_check(pg)
+    pcb_connection_check(pg)
     # current_address_problem(pg)
 
 
