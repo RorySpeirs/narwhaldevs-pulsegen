@@ -7,46 +7,6 @@ import threading
 import queue
 from . import transcode
 
-'''
-So, general plan.
-
-Keep the echo command. It is a good way to sync up messages and responces.
-Echo isn't needed as an "authernication" byte. But the potential sync thing is a good idea.
-
-Remove the recursive connect thing. It is shit.
-
-Add the serial number stuff. The format will be:
-device_type	            8	256         xxx
-hardware_version        8   256         xxx
-firmware_version		16	65536       xx.xxx
-serial_number		    24	16777216    xxxxxxxx
-			    7 bytes 56 bits
-
-
-
-
-So, to connect, here will be the process:
-Have two functions.
-1. Find all Narwhal Devices devices.
-     - Can list them if required
-2. Check narwhal devices devices for Pulse gen. 
-
-
-Don't specify the port number, that is dumb. Specify the device serial number (of if no serial is specified, connect to the first pulse gen found)
-1. Find all matching vid and pid. 
-    Appropriate error if none found.
-2. For each port with appropriate vid and pid, ask for and recieve the serial stuff
-    Error if no devices with Narwhal devices code.
-    Error is no devices with Correct device type identifier
-3. 
-    Different errors depending on responce:
-        No devices responded
-
-
-
-'''
-
-
 class PulseGenerator():
     def __init__(self, port=None):
 
@@ -62,134 +22,71 @@ class PulseGenerator():
 
         self.close_readthread_event = threading.Event()
 
-    def get_connected_devices(self):
-        #Add any ports with valid identifiers to the valid_ports list 
-        valid_ports = []
-        comports = list(serial.tools.list_ports.comports())
-        for comport in comports:
-            if 'vid' in vars(comport) and 'pid' in vars(comport):
-                if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
-                    valid_ports.append(comport)
+        self.valid_ports = []
+        if port:
+            class mock_comport: pass
+            mock_comport.device = port
+            self.valid_ports.append(mock_comport)
 
-        # For every valid port, ask for an echo (which also sends serial number etc.) and store the info
-        ND_devices = []
-        for comport in valid_ports:
+    def connect_serial(self, connection_attempts=0):
+        '''This is a bit funky, because it recursively calls itself until the connection_attempt limit is reached
+        but it works pretty well'''
+        if connection_attempts >= 6:
+            print('Could not connect device')
+            return False #This is ultimately where the connection failure comes from
+        if self.valid_ports:
+            # now try a port
+            comport = self.valid_ports.pop(0)
             self.ser.port = comport.device
             try:
                 self.ser.open()
-            except Exception as ex: # Poor practice? Catch only the exception that happens when you can open a port...?
-                continue
+            except Exception as ex:
+                #if port throws an error on open, wait a bit, then try a new one
+                time.sleep(0.1)
+                return self.connect_serial(connection_attempts + 1)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
             self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
             self.serial_read_thread.start()
-            
-            self.write_command(transcode.encode_echo(b'A')) # The echo command makes the device also spit back the device serial
-            try:
-                device_info = self.msgin_queues['echo'].get(block=True, timeout=1)
-                if device_info['echoed_byte'] == b'A':  #This is just to double check that the message is valid (the first check is the valid identifier and suffient lenght)
-                    del(device_info['echoed_byte'])
-                    device_info['comport'] = comport
-                    ND_devices.append(device_info)
-            except queue.Empty as ex:
-                pass
-            self.close_serial_read_thread()
-        return ND_devices
 
-    def connect(self, serial_number=None):
-        ND_devices = self.get_connected_devices()
-
-        device_found = False
-        if serial_number == None:
-            for device in ND_devices:
-                if device['device_type'] == 1:
-                    print('be super careful, I havent decided on the devicetype format yet')
-                    device_found = True
-                    comport = device['comport']
-                else:
-                    print('be super careful, I havent decided on the devicetype format yet')
-        else:
-            for device in ND_devices:
-                if device['serial_number'] == serial_number:
-                    device_found = True
-                    comport = device['comport']
-                    break
-
-        if device_found:
-            self.serial_number_save = device['serial_number'] # This is incase the the program needs to automatically reconnect. Porbably superfluous at the moment.
-            self.ser.port = comport.device
-            self.ser.open()                 
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
-            self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
-            self.serial_read_thread.start()
-        else:
-            if serial_number == None:
-                raise Exception('No Narwhal Devices Pulse Generator found.')
+            tested_authantication_byte = np.random.bytes(1)
+            self.write_command(transcode.encode_echo(tested_authantication_byte))
+            if self.check_authantication_byte(tested_authantication_byte):
+                return True #This is ultimately where the connection success comes from
             else:
-                raise Exception(f'No Narwhal Devices Pulse Generator found with serial number: {serial_number}')
+                self.close_serial_read_thread()
+                return self.connect_serial(connection_attempts + 1)
+        else:
+            # if there are no ports left in the list, add any valid ports to the list  
+            comports = list(serial.tools.list_ports.comports())
+            for comport in comports:
+                if 'vid' in vars(comport) and 'pid' in vars(comport):
+                    if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
+                        self.valid_ports.append(comport)
+            if self.valid_ports:
+                return self.connect_serial(connection_attempts + 1)
+            else:
+                print('Hardware not found, searching for hardware...')
+                time.sleep(1)
+                return self.connect_serial(connection_attempts + 1)
 
-
-
-    # def connect_serial(self, connection_attempts=0):
-    #     '''This is a bit funky, because it recursively calls itself until the connection_attempt limit is reached
-    #     but it works pretty well'''
-    #     if connection_attempts >= 6:
-    #         print('Could not connect device')
-    #         return False #This is ultimately where the connection failure comes from
-    #     if self.valid_ports:
-    #         # now try a port
-    #         comport = self.valid_ports.pop(0)
-    #         self.ser.port = comport.device
-    #         try:
-    #             self.ser.open()
-    #         except Exception as ex:
-    #             #if port throws an error on open, wait a bit, then try a new one
-    #             time.sleep(0.1)
-    #             return self.connect_serial(connection_attempts + 1)
-    #         self.ser.reset_input_buffer()
-    #         self.ser.reset_output_buffer()
-    #         self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
-    #         self.serial_read_thread.start()
-
-    #         tested_authantication_byte = np.random.bytes(1)
-    #         self.write_command(transcode.encode_echo(tested_authantication_byte))
-    #         if self.check_authantication_byte(tested_authantication_byte):
-    #             return True #This is ultimately where the connection success comes from
-    #         else:
-    #             self.close_serial_read_thread()
-    #             return self.connect_serial(connection_attempts + 1)
-    #     else:
-    #         # if there are no ports left in the list, add any valid ports to the list  
-    #         comports = list(serial.tools.list_ports.comports())
-    #         for comport in comports:
-    #             if 'vid' in vars(comport) and 'pid' in vars(comport):
-    #                 if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
-    #                     self.valid_ports.append(comport)
-    #         if self.valid_ports:
-    #             return self.connect_serial(connection_attempts + 1)
-    #         else:
-    #             print('Hardware not found, searching for hardware...')
-    #             time.sleep(1)
-    #             return self.connect_serial(connection_attempts + 1)
-
-    # def check_authantication_byte(self, tested_authantication_byte):
-    #     echoed_bytes = []
-    #     echo_queue = self.msgin_queues['echo']
-    #     while not echo_queue.empty:
-    #         message = echo_queue.get(block=False)
-    #         echoed_bytes.append(message['echoed_byte'])
-    #     try:
-    #         message = echo_queue.get(timeout=1)
-    #         echoed_bytes.append(message['echoed_byte'])
-    #     except queue.Empty as ex:
-    #         pass
-    #     if tested_authantication_byte in echoed_bytes:
-    #         # print('authentication success')
-    #         return True
-    #     else:
-    #         # print('authentication failed')
-    #         return False
+    def check_authantication_byte(self, tested_authantication_byte):
+        echoed_bytes = []
+        echo_queue = self.msgin_queues['echo']
+        while not echo_queue.empty:
+            message = echo_queue.get(block=False)
+            echoed_bytes.append(message['echoed_byte'])
+        try:
+            message = echo_queue.get(timeout=1)
+            echoed_bytes.append(message['echoed_byte'])
+        except queue.Empty as ex:
+            pass
+        if tested_authantication_byte in echoed_bytes:
+            # print('authentication success')
+            return True
+        else:
+            # print('authentication failed')
+            return False
 
     def monitor_serial(self):
         while not self.close_readthread_event.is_set():
@@ -227,8 +124,6 @@ class PulseGenerator():
         self.close_readthread_event.set()
         self.serial_read_thread.join()
         self.close_readthread_event.clear()
-        for q in self.msgin_queues.values():
-            q.queue.clear()
         self.ser.close()
 
     def write_command(self, encoded_command):
@@ -236,7 +131,7 @@ class PulseGenerator():
         # basically, what i need is that if the read_thread shits itself, the main thread will automatically safe close the connection, and then try to reconnect.
         if self.close_readthread_event.is_set():
             self.close_serial_read_thread()
-            self.connect(serial_number=self.serial_number_save)
+            self.connect_serial()
         try:
             self.ser.write(encoded_command)
         except Exception as ex:
