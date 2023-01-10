@@ -256,7 +256,7 @@ def decode_notification(message):
     finished_notify =        decode_lookup['finished_notify'][finished_notify_tag]
     return {'address':address_of_notification, 'address_notify':address_notify, 'trigger_notify':trig_notify, 'finished_notify':finished_notify}
 
-def decode_serialecho(message):
+def decode_echo(message):
     '''
     Decodes the serialecho type message, which contains an echoed byte and 
     device version information.
@@ -270,7 +270,8 @@ def decode_serialecho(message):
     Returns
     -------
     dictionary
-        The decoded message containing the echoed byte and device information.
+        The decoded message containing the echoed byte and device information
+        including the hardware and firmware versions, and the device serial number.
 
     See Also
     --------
@@ -285,12 +286,18 @@ def decode_serialecho(message):
     Messagein identifier:  1 byte: 101
     Message format:                     BITS USED   FPGA INDEX.
     echoed byte:        1 bytes [0:1]   8 bits      [0+:8]     
-    device version:     7 bytes [1:8]   56 bits     [8+:56]    
+    device type	        1 bytes [1:2]   8 bits      [8+:8]     
+    hardware version    1 bytes [2:3]   8 bits      [16+:8]     8   256         xxx
+    firmware version	2 bytes [3:5]   16 bits     [24+:16]  	16	65536       xx.xxx
+    serial number		3 bytes [5:8]   24 bits     [40+:24]    24	16777216    xxxxxxxx
     '''
     echoed_byte = message[0:1]
-    device_version = message[1:8].decode()
-    return {'echoed_byte':echoed_byte, 'device_version':device_version}
-
+    device_type, =      struct.unpack('<Q', message[1:2] + bytes(7))
+    hardware_version, = struct.unpack('<Q', message[2:3] + bytes(7))
+    firmware_version, = struct.unpack('<Q', message[3:5] + bytes(6))
+    serial_number, =    struct.unpack('<Q', message[5:8] + bytes(5))
+    firmware_version = firmware_version*1E-3
+    return {'echoed_byte':echoed_byte, 'device_type':device_type, 'hardware_version':hardware_version, 'firmware_version':firmware_version, 'serial_number':serial_number}
 #########################################################
 # encode
 def encode_echo(byte_to_echo):
@@ -322,7 +329,7 @@ def encode_echo(byte_to_echo):
 
     See Also
     --------
-    decode_serialecho : The function that decodes the message that the Pulse Gen
+    decode_echo : The function that decodes the message that the Pulse Gen
         sends in resopnse to command generated with `encode_echo`
 
     Notes
@@ -974,7 +981,7 @@ def state_multiformat_to_int(state):
 # constants
 msgin_decodeinfo = {
     100:{'message_length':3,    'decode_function':decode_internal_error,    'message_type':'error'},
-    101:{'message_length':9,    'decode_function':decode_serialecho,        'message_type':'echo'},
+    101:{'message_length':9,    'decode_function':decode_echo,              'message_type':'echo'},
     102:{'message_length':9,    'decode_function':decode_easyprint,         'message_type':'print'},
     103:{'message_length':18,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
     104:{'message_length':4,    'decode_function':decode_notification,      'message_type':'notification'},

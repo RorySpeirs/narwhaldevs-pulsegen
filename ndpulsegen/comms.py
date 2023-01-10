@@ -7,52 +7,13 @@ import threading
 import queue
 from . import transcode
 
-'''
-So, general plan.
-
-Keep the echo command. It is a good way to sync up messages and responces.
-Echo isn't needed as an "authernication" byte. But the potential sync thing is a good idea.
-
-Remove the recursive connect thing. It is shit.
-
-Add the serial number stuff. The format will be:
-device_type	            8	256         xxx
-hardware_version        8   256         xxx
-firmware_version		16	65536       xx.xxx
-serial_number		    24	16777216    xxxxxxxx
-			    7 bytes 56 bits
-
-
-
-
-So, to connect, here will be the process:
-Have two functions.
-1. Find all Narwhal Devices devices.
-     - Can list them if required
-2. Check narwhal devices devices for Pulse gen. 
-
-
-Don't specify the port number, that is dumb. Specify the device serial number (of if no serial is specified, connect to the first pulse gen found)
-1. Find all matching vid and pid. 
-    Appropriate error if none found.
-2. For each port with appropriate vid and pid, ask for and recieve the serial stuff
-    Error if no devices with Narwhal devices code.
-    Error is no devices with Correct device type identifier
-3. 
-    Different errors depending on responce:
-        No devices responded
-
-
-
-'''
-
-
 class PulseGenerator():
     def __init__(self, port=None):
+        self.device_type = 1 # The designator of the pulse generator
 
         #setup serial port
         self.ser = serial.Serial()
-        self.ser.timeout = 0.1          #block for 100ms second
+        self.ser.timeout = 0.1        #block read for 100ms
         self.ser.writeTimeout = 1     #timeout for write
         self.ser.baudrate = 12000000
 
@@ -60,64 +21,22 @@ class PulseGenerator():
         self.msgin_queues = {decodeinfo['message_type']:queue.Queue() for decodeinfo in transcode.msgin_decodeinfo.values()}
         self.msgin_queues['bytes_dropped'] = queue.Queue()
 
+        # If the main thread needs to close the read thread, it will set this event.
         self.close_readthread_event = threading.Event()
 
-    def get_connected_devices(self):
-        #Add any ports with valid identifiers to the valid_ports list 
-        valid_ports = []
-        comports = list(serial.tools.list_ports.comports())
-        for comport in comports:
-            if 'vid' in vars(comport) and 'pid' in vars(comport):
-                if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
-                    valid_ports.append(comport)
-
-        # For every valid port, ask for an echo (which also sends serial number etc.) and store the info
-        ND_devices = []
-        for comport in valid_ports:
-            self.ser.port = comport.device
-            try:
-                self.ser.open()
-            except Exception as ex: # Poor practice? Catch only the exception that happens when you can open a port...?
-                continue
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
-            self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
-            self.serial_read_thread.start()
-            
-            self.write_command(transcode.encode_echo(b'A')) # The echo command makes the device also spit back the device serial
-            try:
-                device_info = self.msgin_queues['echo'].get(block=True, timeout=1)
-                if device_info['echoed_byte'] == b'A':  #This is just to double check that the message is valid (the first check is the valid identifier and suffient lenght)
-                    del(device_info['echoed_byte'])
-                    device_info['comport'] = comport
-                    ND_devices.append(device_info)
-            except queue.Empty as ex:
-                pass
-            self.close_serial_read_thread()
-        return ND_devices
-
     def connect(self, serial_number=None):
+        # Get a list of all available Narwhal Devices devices. Devices won't appear if they are connected to another program
         ND_devices = self.get_connected_devices()
-
+        # If a serial number is specified, search for a device with that number. Otherwise, search for the first pulse generator found.
         device_found = False
-        if serial_number == None:
-            for device in ND_devices:
-                if device['device_type'] == 1:
-                    print('be super careful, I havent decided on the devicetype format yet')
-                    device_found = True
-                    comport = device['comport']
-                else:
-                    print('be super careful, I havent decided on the devicetype format yet')
-        else:
-            for device in ND_devices:
-                if device['serial_number'] == serial_number:
-                    device_found = True
-                    comport = device['comport']
-                    break
+        for device in ND_devices:
+            if (serial_number == None and device['device_type'] == self.device_type) or (serial_number != None and device['serial_number'] == serial_number):
+                device_found = True
+                break
 
         if device_found:
             self.serial_number_save = device['serial_number'] # This is incase the the program needs to automatically reconnect. Porbably superfluous at the moment.
-            self.ser.port = comport.device
+            self.ser.port = device['comport'].device
             self.ser.open()                 
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
@@ -129,67 +48,39 @@ class PulseGenerator():
             else:
                 raise Exception(f'No Narwhal Devices Pulse Generator found with serial number: {serial_number}')
 
-
-
-    # def connect_serial(self, connection_attempts=0):
-    #     '''This is a bit funky, because it recursively calls itself until the connection_attempt limit is reached
-    #     but it works pretty well'''
-    #     if connection_attempts >= 6:
-    #         print('Could not connect device')
-    #         return False #This is ultimately where the connection failure comes from
-    #     if self.valid_ports:
-    #         # now try a port
-    #         comport = self.valid_ports.pop(0)
-    #         self.ser.port = comport.device
-    #         try:
-    #             self.ser.open()
-    #         except Exception as ex:
-    #             #if port throws an error on open, wait a bit, then try a new one
-    #             time.sleep(0.1)
-    #             return self.connect_serial(connection_attempts + 1)
-    #         self.ser.reset_input_buffer()
-    #         self.ser.reset_output_buffer()
-    #         self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
-    #         self.serial_read_thread.start()
-
-    #         tested_authantication_byte = np.random.bytes(1)
-    #         self.write_command(transcode.encode_echo(tested_authantication_byte))
-    #         if self.check_authantication_byte(tested_authantication_byte):
-    #             return True #This is ultimately where the connection success comes from
-    #         else:
-    #             self.close_serial_read_thread()
-    #             return self.connect_serial(connection_attempts + 1)
-    #     else:
-    #         # if there are no ports left in the list, add any valid ports to the list  
-    #         comports = list(serial.tools.list_ports.comports())
-    #         for comport in comports:
-    #             if 'vid' in vars(comport) and 'pid' in vars(comport):
-    #                 if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
-    #                     self.valid_ports.append(comport)
-    #         if self.valid_ports:
-    #             return self.connect_serial(connection_attempts + 1)
-    #         else:
-    #             print('Hardware not found, searching for hardware...')
-    #             time.sleep(1)
-    #             return self.connect_serial(connection_attempts + 1)
-
-    # def check_authantication_byte(self, tested_authantication_byte):
-    #     echoed_bytes = []
-    #     echo_queue = self.msgin_queues['echo']
-    #     while not echo_queue.empty:
-    #         message = echo_queue.get(block=False)
-    #         echoed_bytes.append(message['echoed_byte'])
-    #     try:
-    #         message = echo_queue.get(timeout=1)
-    #         echoed_bytes.append(message['echoed_byte'])
-    #     except queue.Empty as ex:
-    #         pass
-    #     if tested_authantication_byte in echoed_bytes:
-    #         # print('authentication success')
-    #         return True
-    #     else:
-    #         # print('authentication failed')
-    #         return False
+    def get_connected_devices(self):
+        # This attmpts to connect to all serial devices with valid parameters, and if it is a valid Narwhal Device, it adds them to a list and disconnects
+        valid_ports = []
+        comports = list(serial.tools.list_ports.comports())
+        for comport in comports:
+            if 'vid' in vars(comport) and 'pid' in vars(comport):
+                if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
+                    valid_ports.append(comport)
+        # For every valid port, ask for an echo (which also sends serial number etc.) and store the info
+        ND_devices = []
+        for comport in valid_ports:
+            self.ser.port = comport.device
+            try:
+                self.ser.open()
+            except Exception as ex: # Poor practice? Catch only the exception that happens when you can open a port...?
+                print(ex)
+                continue
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
+            self.serial_read_thread.start()
+            # Ask the device to echo a byte, as the reply also contains device information sucha s version and serial number
+            self.write_command(transcode.encode_echo(b'A'))
+            try:
+                device_info = self.msgin_queues['echo'].get(block=True, timeout=1)
+                if device_info['echoed_byte'] == b'A':  #This is just to double check that the message is valid (the first check is the valid identifier and suffient lenght)
+                    del(device_info['echoed_byte'])
+                    device_info['comport'] = comport
+                    ND_devices.append(device_info)
+            except queue.Empty as ex:
+                pass
+            self.close_serial_read_thread()
+        return ND_devices
 
     def monitor_serial(self):
         while not self.close_readthread_event.is_set():
@@ -237,11 +128,15 @@ class PulseGenerator():
         if self.close_readthread_event.is_set():
             self.close_serial_read_thread()
             self.connect(serial_number=self.serial_number_save)
-        try:
-            self.ser.write(encoded_command)
-        except Exception as ex:
-            print('write command failed')
-            self.close_serial_read_thread()
+        
+        #I used to catch any Exceptions. Should I just let them happen?
+        self.ser.write(encoded_command)
+        # try:
+        #     self.ser.write(encoded_command)
+        # except Exception as ex:
+        #     print(f'write command failed')
+        #     print(ex)
+        #     self.close_serial_read_thread()
 
     ######################### Write command functions
     def write_echo(self, byte_to_echo):
@@ -354,189 +249,8 @@ class PulseGenerator():
                 # If a notification was recieved that didn't match any of the specified criteria, calculate the remaining time until the requested timeout
                 timeout_remaining = max(timeout - (time.time() - t0), 0.0)
 
-
-
-
-
-# class PulseGenerator:
-#     def __init__(self, port='COM4'):
-#         self.ser = serial.Serial()
-#         self.ser.baudrate = 12000000
-#         self.ser.port = port
-#         self.ser.timeout = 0            #non blocking read
-#         self.ser.writeTimeout = 2     #timeout for write
-
-#     def connect(self):
-#         comports = list(serial.tools.list_ports.comports())
-#         portdevices = [comport.device for comport in comports]
-#         port_found = False
-#         if self.ser.port not in portdevices:
-#             print('Port: {} does not exist.'.format(self.ser.port))
-#             print('Available ports:')
-#             for comport in comports:
-#                 print('    {}'.format(comport.description))
-#                 if 'USB Serial Port' in comport.description:
-#                     au_port = comport.device
-#                     port_found = True
-#             if port_found:
-#                 self.ser.port = au_port
-#                 print('Narwhal PulseGen found at port: {}. Using this port.'.format(comport.device))
-#             else:
-#                 print('Narwhal PulseGen not found in port list.')
-#         try:
-#             self.ser.open()
-#         except Exception as e:
-#             print("Error opening serial port: " + str(e))
-#             print("Check if another program is has an open connection to the Narwhal PulseGen")
-#             print("Exiting...")
-#             exit()
-#         if self.ser.isOpen():
-#             try:
-#                 self.ser.flushInput() #flush input buffer, discarding all its contents
-#                 self.ser.flushOutput()#flush output buffer, aborting current output
-#                 print('Serial port connected to Narwhal PulseGen...')
-#             except Exception as e1:
-#                 print('Error communicating...: ' + str(e1))
-#         else:
-#             print('Cannot open serial port.')
-#         self._confirm_communications()
-#         self._update_local_state_variables()
-
-#     def _confirm_communications(self):
-#         authantication_byte = np.random.bytes(1)
-#         self.write_echo(authantication_byte)
-#         all_echo_messages = self.read_all_messages_in_pipe(message_identifier=transcode.msgin_identifier['echo'], timeout=0.1)
-#         if all_echo_messages:
-#             success = False
-#             for message in all_echo_messages:
-#                 if message['echoed_byte'] == authantication_byte:
-#                     print('Communication successful. Current design is: {}'.format(message['device_version']))
-#                     success = True
-#                     break
-#             if not success:
-#                 warnings.warn('Communication unsuccessful! Device did not echo correct authentication byte.')
-#         else:
-#             warnings.warn('Communication unsuccessful! Device not responding!')    
-
-#     def _update_local_state_variables(self):
-#         self.write_action(request_state=True)
-#         state = self.return_on_message_type(message_identifier=transcode.msgin_identifier['devicestate'])
-
-#         self.write_action(request_powerline_state=True)
-#         powerline_state = self.return_on_message_type(message_identifier=transcode.msgin_identifier['powerlinestate'])
-
-#         self.final_ram_address = state['final_ram_address']
-#         self.trigger_time = state['trigger_time']
-#         self.run_mode = state['run_mode']
-#         self.trigger_mode = state['trigger_mode']
-#         self.notify_on_main_trig = state['notify_on_main_trig']
-#         self.trigger_length = state['trigger_length']
-#         self.trig_on_powerline = powerline_state['trig_on_powerline']
-#         self.powerline_trigger_delay = powerline_state['powerline_trigger_delay']
-
-#     def _get_message(self, timeout=0.0, print_all_messages=False):
-#         ''' This returns the first message in the pipe, or None if there is none within the pipe
-#         by the time it times out. If timeout=None, this blocks until it reads a message'''
-#         t0 = time.time()
-#         self.ser.timeout = timeout
-#         byte_message_identifier = self.ser.read(1)
-#         if byte_message_identifier != b'':
-#             message_identifier, = struct.unpack('B', byte_message_identifier)
-#             if message_identifier not in transcode.msgin_decodeinfo.keys():
-#                 warnings.warn('The computer read a an invalid message identifier.')
-#                 return None, None
-#             decode_function = transcode.msgin_decodeinfo[message_identifier]['decode_function']
-#             if timeout:
-#                 self.ser.timeout = max(timeout - (time.time() - t0), 0.0)    # sets the timeout to read the rest of the message to be the specified timeout, minus whatever time has been used up so far.
-#             byte_message = self.ser.read(transcode.msgin_decodeinfo[message_identifier]['message_length'] - 1)
-#             if byte_message_identifier == b'':
-#                 warnings.warn('The computer read a valid message identifier, but the full message didn\'t arrive.')
-#                 return None, None
-#             if print_all_messages:
-#                 print(decode_function(byte_message))
-#             return message_identifier, decode_function(byte_message)
-#         return None, None
-
-#     def return_on_message_type(self, message_identifier, timeout=None, print_all_messages=False):
-#         timeout_remaining = timeout
-#         t0 = time.time()
-#         while True:
-#             identifier, message = self._get_message(timeout_remaining, print_all_messages)
-#             if identifier == message_identifier:
-#                 return message
-#             if identifier is None:
-#                 return
-#             if timeout is not None:
-#                 timeout_remaining = max(timeout - (time.time() - t0), 0.0)
-
-#     def return_on_notification(self, finished=None, triggered=None, address=None, timeout=None, print_all_messages=False):
-#         return_on_any = True if finished is triggered is address is None else False
-#         timeout_remaining = timeout
-#         t0 = time.time()
-#         while True:
-#             identifier, message = self._get_message(timeout_remaining, print_all_messages)
-#             if identifier == transcode.msgin_identifier['notification']:
-#                 if (message['address_notify'] and message['address'] == address) or (message['trigger_notify'] == triggered) or (message['finished_notify'] == finished) or return_on_any:
-#                     return message
-#             if identifier is None:
-#                 return
-#             if timeout is not None:
-#                 timeout_remaining = max(timeout - (time.time() - t0), 0.0)
-
-#     def read_all_messages_in_pipe(self, message_identifier=None, timeout=0.0, print_all_messages=False):
-#         '''Reads all messages in the pipe. If timeout=0, returns when there isn't any left.
-#         If timeout>0, then this keeps reading for timeout seconds, and returns after that'''
-#         t0 = time.time()
-#         messages = {}
-#         while True:
-#             timeout_remaining = max(timeout - (time.time() - t0), 0.0)
-#             identifier, message = self._get_message(timeout_remaining, print_all_messages)
-#             if identifier is None:
-#                 if message_identifier:
-#                     return messages.setdefault(message_identifier)
-#                 return messages
-#             messages.setdefault(identifier, []).append(message)
-
-#     def write_echo(self, byte_to_echo):
-#         command = transcode.encode_echo(byte_to_echo)
-#         self.write_to_serial(command)
-
-#     def write_device_options(self, *args, **kwargs):
-#         command = transcode.encode_device_options(*args, **kwargs)
-#         self.write_to_serial(command)
-
-#     def write_powerline_trigger_options(self, *args, **kwargs):
-#         command = transcode.encode_powerline_trigger_options(*args, **kwargs)
-#         self.write_to_serial(command)
-
-#     def write_action(self, *args, **kwargs):
-#         command = transcode.encode_action(*args, **kwargs)
-#         self.write_to_serial(command)
-
-#     def write_general_debug(self, message):
-#         command = transcode.encode_general_debug(message)
-#         self.write_to_serial(command)
-
-#     def write_static_state(self, state):
-#         command = transcode.encode_static_state(state)
-#         self.write_to_serial(command)
-
-#     def write_instructions(self, instructions):
-#         ''' "instructions" are the encoded timing instructions that will be loaded into the pulse generator memeory.
-#         These instructions must be generated using the transcode.encode_instruction function. 
-#         This function accecpts encoded instructions in the following formats (where each individual instruction is always
-#         in bytes/bytearray): A single encoded instruction, multiple encoded instructions joined together in a single bytes/bytearray, 
-#         or a list, tuple, or array of single or multiple encoded instructions.'''
-#         if isinstance(instructions, (list, tuple, np.ndarray)):
-#             self.write_to_serial(b''.join(instructions)) 
-#         else:
-#             self.write_to_serial(instructions) 
-
-#     def write_to_serial(self, command):
-#         self.ser.write(command)
 '''
 Things to implement:
-Validation of parameters handed to functions which send data to the FPGA.
 
 
 So ultimately, what do I want to end up with?
