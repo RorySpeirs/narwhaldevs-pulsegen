@@ -304,7 +304,8 @@ def encode_echo(byte_to_echo):
     '''
     Generates the command to send a single byte to the Pulse Gen, which will
     cause the device to immediately send this byte back to the host computer in
-    a `serialecho` message.
+    a `echo` message. The returned 'echo' message also contains the device
+    version and serial number information.
 
     Parameters
     ----------

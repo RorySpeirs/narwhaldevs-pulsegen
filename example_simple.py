@@ -4,7 +4,7 @@ import numpy as np
 
 # Initialise the pulse generator object and connect to the hardware
 pg = ndpulsegen.PulseGenerator()
-pg.connect_serial()
+pg.connect()
 
 
 # Create the "timing instructions" you want to use. 

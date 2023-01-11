@@ -8,9 +8,7 @@ import queue
 from . import transcode
 
 class PulseGenerator():
-    def __init__(self, port=None):
-        self.device_type = 1 # The designator of the pulse generator
-
+    def __init__(self):
         #setup serial port
         self.ser = serial.Serial()
         self.ser.timeout = 0.1        #block read for 100ms
@@ -24,6 +22,8 @@ class PulseGenerator():
         # If the main thread needs to close the read thread, it will set this event.
         self.close_readthread_event = threading.Event()
 
+        self.device_type = 1 # The designator of the pulse generator
+
     def connect(self, serial_number=None):
         # Get a list of all available Narwhal Devices devices. Devices won't appear if they are connected to another program
         ND_devices = self.get_connected_devices()
@@ -33,7 +33,6 @@ class PulseGenerator():
             if (serial_number == None and device['device_type'] == self.device_type) or (serial_number != None and device['serial_number'] == serial_number):
                 device_found = True
                 break
-
         if device_found:
             self.serial_number_save = device['serial_number'] # This is incase the the program needs to automatically reconnect. Porbably superfluous at the moment.
             self.ser.port = device['comport'].device
@@ -143,16 +142,16 @@ class PulseGenerator():
         command = transcode.encode_echo(byte_to_echo)
         self.write_command(command)
 
-    def write_device_options(self, *args, **kwargs):
-        command = transcode.encode_device_options(*args, **kwargs)
+    def write_device_options(self, final_ram_address=None, run_mode=None, trigger_source=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
+        command = transcode.encode_device_options(final_ram_address, run_mode, trigger_source, trigger_out_length, trigger_out_delay, notify_on_main_trig_out, notify_when_run_finished, software_run_enable)
         self.write_command(command)
 
-    def write_powerline_trigger_options(self, *args, **kwargs):
-        command = transcode.encode_powerline_trigger_options(*args, **kwargs)
+    def write_powerline_trigger_options(self, trigger_on_powerline=None, powerline_trigger_delay=None):
+        command = transcode.encode_powerline_trigger_options(trigger_on_powerline, powerline_trigger_delay)
         self.write_command(command)
 
-    def write_action(self, *args, **kwargs):
-        command = transcode.encode_action(*args, **kwargs)
+    def write_action(self, trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False):
+        command = transcode.encode_action(trigger_now, disable_after_current_run, reset_run, request_state, request_powerline_state)
         self.write_command(command)
 
     def write_general_debug(self, message):
@@ -178,24 +177,26 @@ class PulseGenerator():
     def read_all_messages(self, timeout=0):
         if timeout != 0:
             t0 = time.time()
+            messages = []
             while True:
-                self.read_all_current_messages()
+                messages.extend(self.read_all_current_messages())
                 if time.time() - t0 > timeout:
                     break
+            return messages
         else:
-            self.read_all_current_messages()
+            return self.read_all_current_messages()
 
     def read_all_current_messages(self):
-            for q in self.msgin_queues.values():
-                while not q.empty():
-                    message = q.get()
-                    print(message)
+        messages = []
+        for q in self.msgin_queues.values():
+            while not q.empty():
+                messages.append(q.get())
+        return messages
 
     def get_state(self, timeout=None):
         state_queue = self.msgin_queues['devicestate']
         #Empty the queue
-        while not state_queue.empty:
-            state_queue.get(block=False)
+        state_queue.queue.clear()
         #request the state
         self.write_action(request_state=True)
         # wait for the state to be sent
@@ -207,8 +208,7 @@ class PulseGenerator():
     def get_powerline_state(self, timeout=None):
         state_queue = self.msgin_queues['powerlinestate']
         #Empty the queue
-        while not state_queue.empty:
-            state_queue.get(block=False)
+        state_queue.queue.clear()
         #request the state
         self.write_action(request_powerline_state=True)
         # wait for the state to be sent
@@ -216,18 +216,6 @@ class PulseGenerator():
             return state_queue.get(timeout=1)
         except queue.Empty as ex:
             return None
-
-    def return_on_message_type(self, message_identifier, timeout=None, print_all_messages=False):
-        timeout_remaining = timeout
-        t0 = time.time()
-        while True:
-            identifier, message = self._get_message(timeout_remaining, print_all_messages)
-            if identifier == message_identifier:
-                return message
-            if identifier is None:
-                return
-            if timeout is not None:
-                timeout_remaining = max(timeout - (time.time() - t0), 0.0)
 
     def return_on_notification(self, finished=None, triggered=None, address=None, timeout=None):
         # if no criteria are specified, return on any notification received
@@ -248,34 +236,3 @@ class PulseGenerator():
             if timeout is not None:
                 # If a notification was recieved that didn't match any of the specified criteria, calculate the remaining time until the requested timeout
                 timeout_remaining = max(timeout - (time.time() - t0), 0.0)
-
-'''
-Things to implement:
-
-
-So ultimately, what do I want to end up with?
-    - separation. I want components to be separated logically, grouped by what role they play.
-    - Independence. I want these different components to be usable by other programs without having to invoke everything with an active device.
-    - Simplicity. I still want to be able to invoke an instance of PulseGenerator. And then call simple methods like pg.action_request(...etc)
-
-Possibilities:
-Have a PulseGenerator class that calls other classes, and then manually write all the methods that I want to use.
-    eg, a method might be:
-
-        def action_request(self, *args):
-            command_bytes = encode_decode.action_request(*args)
-            self.write_command(command_bytes)
-
-        where encode_decode is a module that i import at the top to the script where I define the PulseGenerator class.
-        This has the advantage that it is still easy to call all the methods directly, but the disadvantage of a lot of
-        code has to be written (one method for every function pretty much).
-
-I could put all the encode/decode functions as a class, then I could subclass that class to inherit all the functions as
-methods.
-    But how do I then write the commands that will be returned?
-    I would have to catch them by overwititing those methods, in almost exactly the same way as the first possibility.
-    However, any functions which didn't need any modification would be automatically accessable from the user level.
-
-
-'''
-

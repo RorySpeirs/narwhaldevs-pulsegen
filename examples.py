@@ -23,7 +23,6 @@ def software_trig(pg):
     states = (False, False, False, True, True) 
     instr3 = ndpulsegen.transcode.encode_instruction(3, 1, states)
 
-
     # Instructions can be written to the device one at a time... or
     pg.write_instructions(instr0)
     pg.write_instructions(instr1)
