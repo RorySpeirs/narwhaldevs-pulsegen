@@ -426,7 +426,7 @@ def quick_test(pg):
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
     print(pg.get_connected_devices())
-    pg.connect(serial_number=12582912)
+    # pg.connect(serial_number=12582913)
     # pg.connect()
     '''These give an introduction on how to program the device, and what capabilities it has'''
 
@@ -438,7 +438,7 @@ if __name__ == "__main__":
     # abort_run(pg) 
     # run_enable_software(pg)
     # run_enable_hardware(pg)
-    get_state(pg)           #There is a bit of an oddity in "current_address". The state reads what is currently displayed, but the current_address reads what will be executed next
+    # get_state(pg)           #There is a bit of an oddity in "current_address". The state reads what is currently displayed, but the current_address reads what will be executed next
     # set_static_state(pg)
     # notify_when_finished(pg)
     # notify_on_specific_instructions(pg)
