@@ -731,7 +731,7 @@ def encode_static_state(state):
         of 0 represents a low state, and 1 is a high state. If `state` is a
         list, tuple, or array, then the index of the element corresponds to the
         channel of the Pulse Gen. Ie index 0 corresponds to channel 0. The
-        boolean value of each element determins whether that channel is low or
+        boolean value of each element determines whether that channel is low or
         high, where False corresponds to a low state, and True corresponds to a
         high state.
 

@@ -26,16 +26,16 @@ class PulseGenerator():
 
     def connect(self, serial_number=None):
         # Get a list of all available Narwhal Devices devices. Devices won't appear if they are connected to another program
-        ND_devices = self.get_connected_devices()
+        validated_devices = self.get_connected_devices()['validated_devices']
         # If a serial number is specified, search for a device with that number. Otherwise, search for the first pulse generator found.
         device_found = False
-        for device in ND_devices:
-            if (serial_number == None and device['device_type'] == self.device_type) or (serial_number != None and device['serial_number'] == serial_number):
+        for device in validated_devices:
+            if (serial_number == device['serial_number']) or (serial_number == None and device['device_type'] == self.device_type):
                 device_found = True
                 break
         if device_found:
             self.serial_number_save = device['serial_number'] # This is incase the the program needs to automatically reconnect. Porbably superfluous at the moment.
-            self.ser.port = device['comport'].device
+            self.ser.port = device['comport']
             self.ser.open()                 
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
@@ -43,9 +43,11 @@ class PulseGenerator():
             self.serial_read_thread.start()
         else:
             if serial_number == None:
-                raise Exception('No Narwhal Devices Pulse Generator found.')
+                ex = 'No Narwhal Devices Pulse Generator found. It might be unconnected, or another program might be connected to it.'
+                raise Exception(ex)
             else:
-                raise Exception(f'No Narwhal Devices Pulse Generator found with serial number: {serial_number}')
+                ex = f'No Narwhal Devices Pulse Generator found with serial number: {serial_number}.  It might be unconnected, or another program might be connected to it.'
+                raise Exception(ex)
 
     def get_connected_devices(self):
         # This attmpts to connect to all serial devices with valid parameters, and if it is a valid Narwhal Device, it adds them to a list and disconnects
@@ -56,13 +58,15 @@ class PulseGenerator():
                 if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
                     valid_ports.append(comport)
         # For every valid port, ask for an echo (which also sends serial number etc.) and store the info
-        ND_devices = []
+        validated_devices = []
+        unvalidated_devices = []
         for comport in valid_ports:
             self.ser.port = comport.device
             try:
                 self.ser.open()
             except Exception as ex: # Poor practice? Catch only the exception that happens when you can open a port...?
-                print(ex)
+                unvalidated_devices.append(comport.device)
+                # print(ex)
                 continue
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
@@ -74,12 +78,15 @@ class PulseGenerator():
                 device_info = self.msgin_queues['echo'].get(block=True, timeout=1)
                 if device_info['echoed_byte'] == b'A':  #This is just to double check that the message is valid (the first check is the valid identifier and suffient lenght)
                     del(device_info['echoed_byte'])
-                    device_info['comport'] = comport
-                    ND_devices.append(device_info)
+                    device_info['comport'] = comport.device
+                    validated_devices.append(device_info)
+                else:
+                    unvalidated_devices.append(comport.device)
             except queue.Empty as ex:
+                unvalidated_devices.append(comport.device)
                 pass
-            self.close_serial_read_thread()
-        return ND_devices
+            self.disconnect()
+        return {'validated_devices':validated_devices, 'unvalidated_devices':unvalidated_devices}
 
     def monitor_serial(self):
         while not self.close_readthread_event.is_set():
@@ -113,7 +120,7 @@ class PulseGenerator():
                         queue_name = decodeinfo['message_type']
                         self.msgin_queues[queue_name].put(message)
 
-    def close_serial_read_thread(self):
+    def disconnect(self):
         self.close_readthread_event.set()
         self.serial_read_thread.join()
         self.close_readthread_event.clear()
@@ -125,7 +132,7 @@ class PulseGenerator():
         # not really sure if this is the correct place to put this. 
         # basically, what i need is that if the read_thread shits itself, the main thread will automatically safe close the connection, and then try to reconnect.
         if self.close_readthread_event.is_set():
-            self.close_serial_read_thread()
+            self.disconnect()
             self.connect(serial_number=self.serial_number_save)
         
         #I used to catch any Exceptions. Should I just let them happen?
@@ -135,7 +142,7 @@ class PulseGenerator():
         # except Exception as ex:
         #     print(f'write command failed')
         #     print(ex)
-        #     self.close_serial_read_thread()
+        #     self.disconnect()
 
     ######################### Write command functions
     def write_echo(self, byte_to_echo):

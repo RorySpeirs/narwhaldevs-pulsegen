@@ -35,7 +35,7 @@ def software_trig(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
  
-    pg.read_all_messages(timeout=0.1)
+    print(pg.read_all_messages(timeout=0.1))
 
 def hardware_trig(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
@@ -256,7 +256,7 @@ def using_loops_normally(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
-    pg.read_all_messages(timeout=0.1)
+    print(pg.read_all_messages(timeout=0.1))
     '''Notice here that all messages will be printed as they are received, but it wont return until it receives a "finished" notification'''
 
 
@@ -281,7 +281,7 @@ def using_loops_advanced(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
-    pg.read_all_messages(timeout=0.1)
+    print(pg.read_all_messages(timeout=0.1))
 
 
 def powerline_test_global_setting(pg):
