@@ -5,9 +5,16 @@ import time
 
 def software_trig(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, np.ones(24))
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, 0b000000000000000010101010)
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, 8388623)
+    instr0 =  ndpulsegen.transcode.encode_instruction(0, 1, np.ones(24))
+    instr1 =  ndpulsegen.encode_instruction(1, 1, 0b000000000000000010101010)
+    instr2 =  pg.encode_instruction(2, 2, 8388623)
+    
+    '''
+    Note that because encode_instruction is called so often, it can be accessed several different ways:
+    1. As a function of the ndpulsegen.transcode module. ie. ndpulsegen.transcode.encode_instruction(...)
+    2. As a function of the ndpulsegen package. ie. ndpulsegen.encode_instruction(...) 
+    3. As a method of a PulseGenerator object (named pg in this example). ie. pg.encode_instruction(...)
+   '''
 
 
     #Instructions can be geneated by specifying the states as an integer (binary represetation representing output states)
@@ -21,7 +28,7 @@ def software_trig(pg):
     states = [0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     states = [0,0,0,1,1] # if fewer than 24 outputs are specified, trailing values are assumed to be zero
     states = (False, False, False, True, True) 
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 1, states)
+    instr3 =  ndpulsegen.encode_instruction(3, 1, states)
 
     # Instructions can be written to the device one at a time... or
     pg.write_instructions(instr0)
@@ -39,10 +46,10 @@ def software_trig(pg):
 
 def hardware_trig(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0])
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -51,10 +58,10 @@ def hardware_trig(pg):
 
 def run_mode_continuous(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0])
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -66,8 +73,8 @@ def run_mode_continuous(pg):
 
 def abort_run(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], goto_address=0,  goto_counter=1000000000)
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0], goto_address=0,  goto_counter=1000000000)
     instructions = [instr0, instr1]
     pg.write_instructions(instructions)
 
@@ -80,10 +87,10 @@ def abort_run(pg):
 
 def run_enable_software(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0])
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
@@ -99,10 +106,10 @@ def run_enable_software(pg):
 
 def run_enable_hardware(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0])
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
@@ -124,10 +131,10 @@ def run_enable_hardware(pg):
 
 def get_state(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 20000000, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 20000000, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 20000000, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 20000000, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0])
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
@@ -153,10 +160,10 @@ def set_static_state(pg):
 
 def notify_when_finished(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 300000000, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 300000000, [0, 0, 0])
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
@@ -173,10 +180,10 @@ def notify_when_finished(pg):
 
 def notify_on_specific_instructions(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1], notify_computer=True)
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 20000000, [0, 1, 0], notify_computer=True) 
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 200000000, [1, 1, 0]) 
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 300000000, [0, 0, 0], notify_computer=True) 
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1], notify_computer=True)
+    instr1 =  ndpulsegen.encode_instruction(1, 20000000, [0, 1, 0], notify_computer=True) 
+    instr2 =  ndpulsegen.encode_instruction(2, 200000000, [1, 1, 0]) 
+    instr3 =  ndpulsegen.encode_instruction(3, 300000000, [0, 0, 0], notify_computer=True) 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -191,10 +198,10 @@ def notify_on_specific_instructions(pg):
     
 def trigger_delay_and_duration_and_notify_on_main_trigger(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 2, [0, 1, 0]) 
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0]) 
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0]) 
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 2, [0, 1, 0]) 
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0]) 
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0]) 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
     
@@ -210,10 +217,10 @@ def trig_out_on_specific_instructions(pg):
     the resulting behavious is undefined (it is deterministic, but complicated. Just avoid doing it if this worries you).
     Note that I made the trigger delay larger than the the total run time, so the main trigger never activates.'''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], hardware_trig_out=True)    #Note that this instruction will now make the hardware trigout activeate
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0], hardware_trig_out=True)    #This one will too.
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0], hardware_trig_out=True)    #Note that this instruction will now make the hardware trigout activeate
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0], hardware_trig_out=True)    #This one will too.
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=80, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
@@ -223,11 +230,11 @@ def stop_and_wait_on_specific_instructions(pg):
     '''This demonstrates how to use the stop_and_wait tags. Note that I am also using notify tags because it is convenient for the demonstration
     but they are not necessary.'''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], stop_and_wait=True, notify_computer=True)    # "stop_and_wait" tag here. This instruction DOES get executed, then the timer stops AFTER this instruction is finished.
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 1, [1, 1, 0])                                              #Instruction 2 is loaded but its state IS NOT OUTPUT. The timer starts on the next trig, and this instruction is IMMEDIATELY EXECUTED.
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 1, [0, 0, 0], stop_and_wait=True, notify_computer=True)    #Again, this is tagged as "stop_and_wait", so it runs, and then pauses on the last cycle.
-    instr4 = ndpulsegen.transcode.encode_instruction(4, 1, [0, 0, 0])                                              #Again, 4 is loaded but not executed, but will be upon the next trigger.
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0], stop_and_wait=True, notify_computer=True)    # "stop_and_wait" tag here. This instruction DOES get executed, then the timer stops AFTER this instruction is finished.
+    instr2 =  ndpulsegen.encode_instruction(2, 1, [1, 1, 0])                                              #Instruction 2 is loaded but its state IS NOT OUTPUT. The timer starts on the next trig, and this instruction is IMMEDIATELY EXECUTED.
+    instr3 =  ndpulsegen.encode_instruction(3, 1, [0, 0, 0], stop_and_wait=True, notify_computer=True)    #Again, this is tagged as "stop_and_wait", so it runs, and then pauses on the last cycle.
+    instr4 =  ndpulsegen.encode_instruction(4, 1, [0, 0, 0])                                              #Again, 4 is loaded but not executed, but will be upon the next trigger.
     instructions = [instr0, instr1, instr2, instr3, instr4]
     pg.write_instructions(instructions)
     pg.write_device_options(final_ram_address=4, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
@@ -246,10 +253,10 @@ def stop_and_wait_on_specific_instructions(pg):
 
 def using_loops_normally(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1 ,[1, 1, 1], notify_computer=True)
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 2, [0, 1, 0], notify_computer=True)
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 3, [1, 1, 0], goto_address=1, goto_counter=2, notify_computer=True) #from here to 1, twice.
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 4, [0, 0, 0], goto_address=0, goto_counter=1, notify_computer=True) #from here to 0, once. So final sequence will be 0,1,2, 1,2, 1,2,3, 0,1,2, 1,2, 1,2,3 
+    instr0 =  ndpulsegen.encode_instruction(0, 1 ,[1, 1, 1], notify_computer=True)
+    instr1 =  ndpulsegen.encode_instruction(1, 2, [0, 1, 0], notify_computer=True)
+    instr2 =  ndpulsegen.encode_instruction(2, 3, [1, 1, 0], goto_address=1, goto_counter=2, notify_computer=True) #from here to 1, twice.
+    instr3 =  ndpulsegen.encode_instruction(3, 4, [0, 0, 0], goto_address=0, goto_counter=1, notify_computer=True) #from here to 0, once. So final sequence will be 0,1,2, 1,2, 1,2,3, 0,1,2, 1,2, 1,2,3 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -262,15 +269,15 @@ def using_loops_normally(pg):
 
 def using_loops_advanced(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1], goto_address=2, goto_counter=1 ,notify_computer=True)    #skip forward to 2 the first time it is executed.
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], notify_computer=True)
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 1, [1, 1, 0], goto_address=0, goto_counter=1, notify_computer=True)    #regular loop back to 0
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 1, [0, 0, 0], goto_address=5946, goto_counter=1, notify_computer=True) #Jump to a completely different part of ram (beyound the final address)
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1], goto_address=2, goto_counter=1 ,notify_computer=True)    #skip forward to 2 the first time it is executed.
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0], notify_computer=True)
+    instr2 =  ndpulsegen.encode_instruction(2, 1, [1, 1, 0], goto_address=0, goto_counter=1, notify_computer=True)    #regular loop back to 0
+    instr3 =  ndpulsegen.encode_instruction(3, 1, [0, 0, 0], goto_address=5946, goto_counter=1, notify_computer=True) #Jump to a completely different part of ram (beyound the final address)
 
-    instr_a = ndpulsegen.transcode.encode_instruction(5946, 1, [1, 1, 1], notify_computer=True)
-    instr_b = ndpulsegen.transcode.encode_instruction(5947, 1, [0, 1, 0], notify_computer=True)
-    instr_c = ndpulsegen.transcode.encode_instruction(5948, 1, [1, 1, 0], notify_computer=True)
-    instr_d = ndpulsegen.transcode.encode_instruction(5949, 1, [0, 0, 0], goto_address=3, goto_counter=1, notify_computer=True) #Jump back to 3
+    instr_a =  ndpulsegen.encode_instruction(5946, 1, [1, 1, 1], notify_computer=True)
+    instr_b =  ndpulsegen.encode_instruction(5947, 1, [0, 1, 0], notify_computer=True)
+    instr_c =  ndpulsegen.encode_instruction(5948, 1, [1, 1, 0], notify_computer=True)
+    instr_d =  ndpulsegen.encode_instruction(5949, 1, [0, 0, 0], goto_address=3, goto_counter=1, notify_computer=True) #Jump back to 3
     '''An example use of this might be to have multiple large pulse sequences pre loaded into different parts of ram, and then to choose beteen any given pulse
     sequence only requires loading a single new instruction, which could be benificial if short loading times are desired between runs.'''
 
@@ -287,11 +294,11 @@ def using_loops_advanced(pg):
 def powerline_test_global_setting(pg):
     '''Note that the device only syncs with the AC line when a trigger is sent. So if this wun was set to continuous, subsequent loops would not re-sync with the AC line.'''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 100000, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 100000, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 200000, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 300000, [0, 0, 0])
-    instr4 = ndpulsegen.transcode.encode_instruction(4, 1, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 100000, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 100000, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 200000, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 300000, [0, 0, 0])
+    instr4 =  ndpulsegen.encode_instruction(4, 1, [0, 0, 0])
     instructions = [instr0, instr1, instr3, instr2, instr4]
     pg.write_instructions(instructions)
 
@@ -318,10 +325,10 @@ def powerline_test_global_setting(pg):
 
 def powerline_sync_instruction_single_run(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 100000, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 100000, [0, 1, 0], stop_and_wait=True)
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 200000, [1, 1, 0], powerline_sync=True)
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 300000, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 100000, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 100000, [0, 1, 0], stop_and_wait=True)
+    instr2 =  ndpulsegen.encode_instruction(2, 200000, [1, 1, 0], powerline_sync=True)
+    instr3 =  ndpulsegen.encode_instruction(3, 300000, [0, 0, 0])
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -343,11 +350,11 @@ def powerline_sync_instruction_continuous_run(pg):
         address=1 effectively becomes the "first" instruction.
          '''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    clone_instr3 = ndpulsegen.transcode.encode_instruction(0, 1, [0, 0, 0], stop_and_wait=True)
-    instr0 = ndpulsegen.transcode.encode_instruction(1, 100000, [1, 1, 1], powerline_sync=True)
-    instr1 = ndpulsegen.transcode.encode_instruction(2, 100000, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(3, 200000, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(4, 300000, [0, 0, 0])
+    clone_instr3 =  ndpulsegen.encode_instruction(0, 1, [0, 0, 0], stop_and_wait=True)
+    instr0 =  ndpulsegen.encode_instruction(1, 100000, [1, 1, 1], powerline_sync=True)
+    instr1 =  ndpulsegen.encode_instruction(2, 100000, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(3, 200000, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(4, 300000, [0, 0, 0])
     instructions = [clone_instr3, instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -360,11 +367,11 @@ def powerline_sync_instruction_continuous_run(pg):
 
 def put_into_and_recover_from_erroneous_state(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False\
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1], notify_computer=True)
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], notify_computer=True)
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 300000000, [1, 1, 0], notify_computer=True)            #This instruction is executing for 3 seconds
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 100, [0, 0, 0], notify_computer=True) 
-    instr_hang = ndpulsegen.transcode.encode_instruction(4999, int(2**48-1), [0, 0, 0], notify_computer=True)  #This is standing in for a possible old instruction that is sitting in memory (see explanation).
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1], notify_computer=True)
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0], notify_computer=True)
+    instr2 =  ndpulsegen.encode_instruction(2, 300000000, [1, 1, 0], notify_computer=True)            #This instruction is executing for 3 seconds
+    instr3 =  ndpulsegen.encode_instruction(3, 100, [0, 0, 0], notify_computer=True) 
+    instr_hang =  ndpulsegen.encode_instruction(4999, int(2**48-1), [0, 0, 0], notify_computer=True)  #This is standing in for a possible old instruction that is sitting in memory (see explanation).
     instructions = [instr0, instr1, instr2, instr3, instr_hang]
     pg.write_instructions(instructions)
 
@@ -411,10 +418,10 @@ def put_into_and_recover_from_erroneous_state(pg):
 
 def quick_test(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 3, [0, 0, 0])
+    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1])
+    instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0])
+    instr2 =  ndpulsegen.encode_instruction(2, 2, [1, 1, 0])
+    instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0])
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
@@ -425,14 +432,14 @@ def quick_test(pg):
 #Make program run now...
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
-    print(pg.get_connected_devices())
-    # pg.connect(serial_number=12582913)
-    # pg.connect()
+    # print(pg.get_connected_devices())
+    # pg.connect(serial_number=12582914)
+    pg.connect()
     '''These give an introduction on how to program the device, and what capabilities it has'''
 
     # quick_test(pg)
 
-    # software_trig(pg)
+    software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 

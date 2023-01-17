@@ -180,8 +180,8 @@ if __name__ == "__main__":
 
     usb_port ='COM6'
     # # usb_port ='tty.usbserial-FT3KRFFN0'
-    pg = ndpulsegen.PulseGenerator(usb_port)
-    assert pg.connect_serial()
+    pg = ndpulsegen.PulseGenerator()
+    pg.connect()
 
 
 

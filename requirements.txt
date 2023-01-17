@@ -6,6 +6,6 @@ Macintosh Virtual Comport (VCP) drivers support a maximum baud rate of 115200, w
 is below the firmware fixed Pulse Generator baud rate of 12000000.
 
 The Pulse Generator baud rate can be reduced to 115200 with a firmware change. Doing so
-reduced the communication speed with the computer, but otherwise does not affect device
+reduces the communication speed with the computer, but otherwise does not affect device
 performance in any way.
 Contact rory@narwhaldevices.com for more information.

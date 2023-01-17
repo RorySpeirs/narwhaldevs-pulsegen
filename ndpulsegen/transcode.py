@@ -296,7 +296,8 @@ def decode_echo(message):
     hardware_version, = struct.unpack('<Q', message[2:3] + bytes(7))
     firmware_version, = struct.unpack('<Q', message[3:5] + bytes(6))
     serial_number, =    struct.unpack('<Q', message[5:8] + bytes(5))
-    firmware_version = firmware_version*1E-3
+    firmware_version = str(firmware_version)
+    firmware_version = firmware_version[:-3] + '.' + firmware_version[-3:]
     return {'echoed_byte':echoed_byte, 'device_type':device_type, 'hardware_version':hardware_version, 'firmware_version':firmware_version, 'serial_number':serial_number}
 #########################################################
 # encode

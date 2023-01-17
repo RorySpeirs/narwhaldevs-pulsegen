@@ -24,6 +24,9 @@ class PulseGenerator():
 
         self.device_type = 1 # The designator of the pulse generator
 
+        # encoding instructions is done all the time by the user. Make it also a method so peoples code can be more self contained. 
+        self.encode_instruction = transcode.encode_instruction
+
     def connect(self, serial_number=None):
         # Get a list of all available Narwhal Devices devices. Devices won't appear if they are connected to another program
         validated_devices = self.get_connected_devices()['validated_devices']
@@ -74,10 +77,12 @@ class PulseGenerator():
             self.serial_read_thread = threading.Thread(target=self.monitor_serial, daemon=True)
             self.serial_read_thread.start()
             # Ask the device to echo a byte, as the reply also contains device information sucha s version and serial number
-            self.write_command(transcode.encode_echo(b'A'))
+            check_byte = 209
+            check_byte = check_byte.to_bytes(1, 'little')
+            self.write_command(transcode.encode_echo(check_byte))
             try:
                 device_info = self.msgin_queues['echo'].get(block=True, timeout=1)
-                if device_info['echoed_byte'] == b'A':  #This is just to double check that the message is valid (the first check is the valid identifier and suffient lenght)
+                if device_info['echoed_byte'] == check_byte:  #This is just to double check that the message is valid (the first check is the valid identifier and suffient lenght)
                     del(device_info['echoed_byte'])
                     device_info['comport'] = comport.device
                     validated_devices.append(device_info)
@@ -147,31 +152,38 @@ class PulseGenerator():
 
     ######################### Write command functions
     def write_echo(self, byte_to_echo):
+        '''For more documentation, see ndpulsegen.transcode.encode_echo '''
         command = transcode.encode_echo(byte_to_echo)
         self.write_command(command)
 
     def write_device_options(self, final_ram_address=None, run_mode=None, trigger_source=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
+        '''For more documentation, see ndpulsegen.transcode.encode_device_options '''
         command = transcode.encode_device_options(final_ram_address, run_mode, trigger_source, trigger_out_length, trigger_out_delay, notify_on_main_trig_out, notify_when_run_finished, software_run_enable)
         self.write_command(command)
 
     def write_powerline_trigger_options(self, trigger_on_powerline=None, powerline_trigger_delay=None):
+        '''For more documentation, see ndpulsegen.transcode.encode_powerline_trigger_options '''
         command = transcode.encode_powerline_trigger_options(trigger_on_powerline, powerline_trigger_delay)
         self.write_command(command)
 
     def write_action(self, trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False):
+        '''For more documentation, see ndpulsegen.transcode.encode_action '''
         command = transcode.encode_action(trigger_now, disable_after_current_run, reset_run, request_state, request_powerline_state)
         self.write_command(command)
 
     def write_general_debug(self, message):
+        '''For more documentation, see ndpulsegen.transcode.encode_general_debug '''
         command = transcode.encode_general_debug(message)
         self.write_command(command)
 
     def write_static_state(self, state):
+        '''For more documentation, see ndpulsegen.transcode.encode_static_state '''
         command = transcode.encode_static_state(state)
         self.write_command(command)
 
     def write_instructions(self, instructions):
-        ''' "instructions" are the encoded timing instructions that will be loaded into the pulse generator memeory.
+        '''For more documentation, see ndpulsegen.transcode.write_device_options 
+        "instructions" are the encoded timing instructions that will be loaded into the pulse generator memeory.
         These instructions must be generated using the transcode.encode_instruction function. 
         This function accecpts encoded instructions in the following formats (where each individual instruction is always
         in bytes/bytearray): A single encoded instruction, multiple encoded instructions joined together in a single bytes/bytearray, 
