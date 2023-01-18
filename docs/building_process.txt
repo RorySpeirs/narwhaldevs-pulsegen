@@ -1,0 +1,27 @@
+Update version number in pyproject.toml
+If you want to keep the same version number, but change the upload, you must change the build number (see note).
+
+Open terminal in project folder. eg narwhaldevs-pulsegen
+python -m build
+python -m twine upload --skip-existing dist/*
+Enter username and password.
+
+
+
+
+
+
+
+
+How to overwrite pypi package when doing upload from command line?
+See:
+https://stackoverflow.com/questions/21064581/how-to-overwrite-pypi-package-when-doing-upload-from-command-line
+"
+A late answer, but: it seems everybody agrees you can't overwrite existing pypi uploads, or re-upload a fixed version after you delete a broken version. However, it seems actually possible and officially supported: "build numbers" are a feature that nobody has ever used or remembers they exist, but that seems to work, at least for me.
+
+The trick is to rename the files in the following pattern:
+
+mypackage-0.31.0-py2.py3-none-any.whl
+mypackage-0.31.0-1-py2.py3-none-any.whl
+mypackage-0.31.0-2-py2.py3-none-any.whl
+The "-1" or "-2" are build numbers. If pip finds all these files for the same release, it will pick the one with the highest build number. It also seems to work if it finds only a single file with a non-zero build number, so you can use that after you deleted the original."
