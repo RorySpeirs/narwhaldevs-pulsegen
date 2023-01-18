@@ -432,7 +432,7 @@ def quick_test(pg):
 #Make program run now...
 if __name__ == "__main__":
     pg = ndpulsegen.PulseGenerator()
-    # print(pg.get_connected_devices())
+    print(pg.get_connected_devices())
     # pg.connect(serial_number=12582914)
     pg.connect()
     '''These give an introduction on how to program the device, and what capabilities it has'''
