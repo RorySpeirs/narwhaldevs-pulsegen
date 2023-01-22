@@ -60,6 +60,17 @@ if __name__ == "__main__":
     run_output_constantly(pg)
 
 '''
+OK, si the initial probablem I though I had, of "how long will it delat the signal" is not bad.
+Looks like less than ~1 meter of cable woth of time.
+
+But...
+It does affect rising and falling edges differently. It seems to extend the "on" time by a 
+clock cycle. I havent thought much about it, but maybe it isn't so bad.
+
+Especially, I have to have this for the hardware_run_enable. But can I afford it for the trigger in?
+And can I get away with a much lower resistance? I suspect not.
+
+
 So, what is the extra delay induced by the resistor.
 All I can say so far is that it is more than 0, and less than 10ns.
 Need to use increasing cable length to calculate.
