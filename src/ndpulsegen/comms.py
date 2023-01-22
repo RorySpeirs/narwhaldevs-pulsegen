@@ -57,7 +57,7 @@ class PulseGenerator():
         valid_ports = []
         comports = list(serial.tools.list_ports.comports())
         for comport in comports:
-            # print(com
+            print(comport)
             if 'vid' in vars(comport) and 'pid' in vars(comport):
                 if vars(comport)['vid'] == 1027 and vars(comport)['pid'] == 24592:
                     valid_ports.append(comport)
@@ -68,6 +68,7 @@ class PulseGenerator():
             self.ser.port = comport.device
             try:
                 self.ser.open()
+                # print(f'open comport {comport.device}')
             except Exception as ex: # Poor practice? Catch only the exception that happens when you can open a port...?
                 unvalidated_devices.append(comport.device)
                 # print(ex)
