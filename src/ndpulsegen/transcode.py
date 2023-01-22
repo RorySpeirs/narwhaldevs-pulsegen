@@ -491,7 +491,7 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         function with argument `disable_after_current_run`=True).
     software_run_enable: bool, optional
         If False, and a run is in progress the timer in the run is immediately
-        paused, and all channels maintain their current output the output. The
+        paused, and all channels maintain their current output. The
         timer immediately resumes when `software_run_enable`=True. If False, and
         a run is not in progress, the run will be prevented from starting until
         `software_run_enable`=True. Triggers are ignored while
