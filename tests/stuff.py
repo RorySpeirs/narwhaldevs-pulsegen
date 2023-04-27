@@ -1,21 +1,24 @@
-from pylab import *
-import numpy as np
+import time
+import datetime
 
 
-# rng = np.random.default_rng()
-N = 100000
-vals = 1+np.round( np.random.f(3, 2, N)).astype(np.int)
+N = 1000
 
-bins = 20
-values = arange(bins)
-n = zeros(bins)
-for val in vals:
-    if val <= bins-1 and val >=0:
-        n[int(val)] +=1
-
-# print(vals)
-print(n/N*100)
+record = []
+t0 = time.time()
+for i in range(N):
+    record.append(time.time())
+t1 = time.time()
+print(t1)
+print(str(datetime.datetime.fromtimestamp(t1)).split()[1])
 
 
-plot(values, n, '--o')
-show()
+print(f'{(t1-t0)/N*1E9}')
+
+
+
+
+#So, the basic idea, is that every message that gets decoded gets a outdict['timestamp'] = time.time()
+# added to it.
+
+#This can then be decoded with str(datetime.datetime.fromtimestamp(timestamp)).split()
