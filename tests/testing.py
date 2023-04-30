@@ -4,7 +4,9 @@ import time
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from pathlib import Path
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent / 'src'))
 import ndpulsegen
 
 
@@ -29,7 +31,7 @@ def cause_invalid_receive(pg):
     to test that the FPGA is dealing with the error correctly'''
     message_identifier = struct.pack('B', 15)
     pg.write_command(message_identifier)
-    pg.read_all_messages(timeout=0.5)
+    print(pg.read_all_messages(timeout=0.5))
 
 def cause_timeout_on_receive(pg):
     '''This function deliberatly sends a message that is incomplete'''
@@ -37,7 +39,7 @@ def cause_timeout_on_receive(pg):
     pg.write_command(message_identifier)
     pg.write_command(struct.pack('B', 1))
     pg.write_command(struct.pack('B', 2))
-    pg.read_all_messages(timeout=0.5)
+    print(pg.read_all_messages(timeout=0.5))
 
 def cause_timeout_on_message_forward(pg):
     '''This demonstrates a limitation of the instruction loading process on the FPGA. If a run is actually running,
@@ -52,7 +54,7 @@ def cause_timeout_on_message_forward(pg):
     pg.write_action(trigger_now=True)
 
     pg.write_instructions(instructions)
-    pg.read_all_messages(timeout=0.5)
+    print(pg.read_all_messages(timeout=0.5))
     time.sleep(1)
     pg.write_action(disable_after_current_run=True)
 
@@ -74,7 +76,7 @@ def fully_load_ram_test(pg):
 
     pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
-    pg.read_all_messages(timeout=1)
+    print(pg.read_all_messages(timeout=1))
 
 
 
@@ -93,7 +95,7 @@ def test_notifications(pg):
     pg.write_device_options(final_ram_address=instruction_number-1, run_mode='single', trigger_source='software', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
-    pg.read_all_messages(timeout=2)
+    print(pg.read_all_messages(timeout=2))
 
 
 def pcb_connection_check(pg):
@@ -131,7 +133,7 @@ def pcb_connection_check(pg):
             if input_character.encode() == chr(27).encode():
                 break
     pg.write_action(disable_after_current_run=True)
-    pg.read_all_messages(timeout=0.5)
+    print(pg.read_all_messages(timeout=0.5))
 
 
 def print_bytes(bytemessage):
@@ -191,8 +193,8 @@ if __name__ == "__main__":
     # cause_timeout_on_message_forward(pg)
     # fully_load_ram_test(pg)                  
     # test_notifications(pg)
-    pcb_connection_check(pg)
-    # current_address_problem(pg)
+    # pcb_connection_check(pg)
+    current_address_problem(pg)
 
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
