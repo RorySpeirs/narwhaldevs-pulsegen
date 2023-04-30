@@ -179,8 +179,8 @@ Bottom line: it seems like it should be easy to sync up the output state, with t
 if __name__ == "__main__":
 
     usb_port ='COM6'
-    # # usb_port ='tty.usbserial-FT3KRFFN0'
     pg = ndpulsegen.PulseGenerator()
+    print(pg.get_connected_devices())
     pg.connect()
 
 

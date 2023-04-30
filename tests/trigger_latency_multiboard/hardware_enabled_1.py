@@ -48,7 +48,7 @@ if __name__ == "__main__":
     print_devices(pg)
     # [print(dev_info) for dev_info in pg.get_connected_devices()[]]
     # print(pg.get_connected_devices())
-    pg.connect(serial_number=12582914)
+    pg.connect(serial_number=12582916)
     # pg.connect()
     '''These give an introduction on how to program the device, and what capabilities it has'''
 

@@ -428,6 +428,7 @@ def quick_test(pg):
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
+    [print(key,':',value) for key, value in pg.get_state().items()]
 
 #Make program run now...
 if __name__ == "__main__":
@@ -439,7 +440,7 @@ if __name__ == "__main__":
 
     # quick_test(pg)
 
-    software_trig(pg)
+    # software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
@@ -448,7 +449,7 @@ if __name__ == "__main__":
     # get_state(pg)           #There is a bit of an oddity in "current_address". The state reads what is currently displayed, but the current_address reads what will be executed next
     # set_static_state(pg)
     # notify_when_finished(pg)
-    # notify_on_specific_instructions(pg)
+    notify_on_specific_instructions(pg)
     # trigger_delay_and_duration_and_notify_on_main_trigger(pg)
     # trig_out_on_specific_instructions(pg)
     # stop_and_wait_on_specific_instructions(pg)
