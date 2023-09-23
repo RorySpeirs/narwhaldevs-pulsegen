@@ -180,8 +180,8 @@ def notify_when_finished(pg):
 
 def notify_on_specific_instructions(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1], notify_computer=True)
-    instr1 =  ndpulsegen.encode_instruction(1, 20000000, [0, 1, 0], notify_computer=True) 
+    instr0 =  ndpulsegen.encode_instruction(0, 100000, [1, 1, 1], notify_computer=True)
+    instr1 =  ndpulsegen.encode_instruction(1, 200000000, [0, 1, 0], notify_computer=True) 
     instr2 =  ndpulsegen.encode_instruction(2, 200000000, [1, 1, 0]) 
     instr3 =  ndpulsegen.encode_instruction(3, 300000000, [0, 0, 0], notify_computer=True) 
     instructions = [instr0, instr1, instr2, instr3]
@@ -189,7 +189,7 @@ def notify_on_specific_instructions(pg):
 
     pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
-    
+
     print(pg.return_on_notification(address=1, timeout=1))
     print(pg.return_on_notification(address=3, timeout=6))
     '''Notice that instruction 0 is tagged to notify the computer, which happens, but the return_on_noticication
@@ -440,7 +440,7 @@ if __name__ == "__main__":
 
     # quick_test(pg)
 
-    software_trig(pg)
+    # software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
@@ -449,7 +449,7 @@ if __name__ == "__main__":
     # get_state(pg)           #There is a bit of an oddity in "current_address". The state reads what is currently displayed, but the current_address reads what will be executed next
     # set_static_state(pg)
     # notify_when_finished(pg)
-    # notify_on_specific_instructions(pg)
+    notify_on_specific_instructions(pg)
     # trigger_delay_and_duration_and_notify_on_main_trigger(pg)
     # trig_out_on_specific_instructions(pg)
     # stop_and_wait_on_specific_instructions(pg)

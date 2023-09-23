@@ -145,10 +145,10 @@ def print_bytes(bytemessage):
 
 def current_address_problem(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
+    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [0, 0, 0])
     instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 200000000000, [0, 0, 0])
+    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 0, 0])
+    instr3 = ndpulsegen.transcode.encode_instruction(3, 2, [1, 1, 0])
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
@@ -160,7 +160,7 @@ def current_address_problem(pg):
     pg.write_action(trigger_now=True)
     [print(key,':',value) for key, value in pg.get_state().items() if key in ['current_address', 'state']]
     pg.write_action(disable_after_current_run=True)
-
+    # pg.write_action(reset_run=True)
 
 '''Ok, so this is the behaviour on the whole.
 
@@ -176,16 +176,127 @@ Bottom line: it seems like it should be easy to sync up the output state, with t
 
 '''
 
+def quick_check(pg):
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
+    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
+    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
+    instr3 = ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0])
 
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='hardware', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    
+
+    # '''Testing the get state notification'''
+    # pg.write_action(trigger_now=True)
+    # [print(key,':',value) for key, value in pg.get_state().items() if key in ['current_address', 'state']]
+    # pg.write_action(disable_after_current_run=True)
+
+
+def quick_count(pg):
+    
+    instructions = []
+    for counter in range(2**10):
+        bit0 = (counter & 2**0) >> 0
+        bit1 = (counter & 2**1) >> 1
+        bit2 = (counter & 2**2) >> 2
+        bit3 = (counter & 2**3) >> 3
+        bit4 = (counter & 2**4) >> 4
+        bit5 = (counter & 2**5) >> 5
+        bit6 = (counter & 2**6) >> 6
+        bit7 = (counter & 2**7) >> 7
+        bit8 = (counter & 2**8) >> 8
+        bit9 = (counter & 2**9) >> 9
+        instructions.append(ndpulsegen.transcode.encode_instruction(counter, 1, [bit0, bit1, bit2, bit3, bit4, bit5, bit6, bit7, bit8, bit9]))
+        # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+        print(bit0, bit1, bit2, bit3, bit4)
+    instructions.append(ndpulsegen.transcode.encode_instruction(2**10, 5, [0,0,0,0,0]))
+
+    # instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0,0,0,0,0]))
+
+    # pg.write_action(reset_run=True)
+    pg.write_instructions(instructions)
+    pg.write_device_options(final_ram_address=2**10, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+    pg.write_action(trigger_now=True)
+
+def specific_count(pg):
+    # pg.write_action(reset_run=True)
+    pg.write_action(disable_after_current_run=True)
+    instructions = []
+    # instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(3, 1, [1,1,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(4, 1, [1,1,1,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(5, 1, [1,1,1,1,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(6, 1, [1,1,1,1,1,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(7, 1, [1,1,1,1,1,1,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(8, 1, [1,1,1,1,1,1,1,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(9, 1, [1,1,1,1,1,1,1,1,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(10, 1, [1,1,1,1,1,1,1,1,1,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(11, 1, [1,1,1,1,1,1,1,1,1,1]))
+
+
+
+    instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1,0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [1,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1,0,0,0,0,0,0,0,0,0]))
+    instructions.append(ndpulsegen.transcode.encode_instruction(1, 100, [0,0,0,0,0,0,0,0,0,0]))
+
+    # instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(3, 1, [0,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(4, 1, [1,0,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(5, 1, [1,1,0,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(6, 1, [1,1,1,0,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(7, 1, [1,1,1,1,0,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(8, 1, [1,1,1,1,1,0,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(9, 1, [1,1,1,1,1,1,0,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(10, 1, [1,1,1,1,1,1,1,0,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(11, 1, [1,1,1,1,1,1,1,1,0,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(12, 1,[1,1,1,1,1,1,1,1,1,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(13, 1, [1,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(14, 100, [0,0,0,0,0,0,0,0,0,0]))
+
+    # instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1,1,1,1,1,1,1,1,1,1]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(3, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(4, 1, [1,1,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(5, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(6, 1, [1,1,1,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(7, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(8, 1, [1,1,1,1,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(9, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(10, 1, [1,1,1,1,1,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(11, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(12, 1, [1,1,1,1,1,1,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(13, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(14, 1, [1,1,1,1,1,1,1,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(15, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(16, 1, [1,1,1,1,1,1,1,1,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(17, 1, [0,0,0,0,0,0,0,0,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(18, 1, [1,1,1,1,1,1,1,1,0,0]))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(19, 1, [0,0,0,0,0,0,0,0,0,0]))
+    pg.write_instructions(instructions)
+    pg.write_device_options(final_ram_address=len(instructions)-1, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+    pg.write_action(trigger_now=True)
 
 if __name__ == "__main__":
 
-    usb_port ='COM6'
     pg = ndpulsegen.PulseGenerator()
-    print(pg.get_connected_devices())
+    # print(pg.get_connected_devices())
     pg.connect()
 
-
+    # quick_check(pg)
+    # quick_count(pg)
+    # specific_count(pg)
 
     # echo_terminal_characters(pg)
     # cause_invalid_receive(pg)
