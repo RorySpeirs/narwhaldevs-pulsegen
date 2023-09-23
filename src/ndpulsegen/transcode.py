@@ -82,7 +82,7 @@ def decode_easyprint(message):
     binary_representation = []
     for letter in message[::-1]:
         binary_representation.append('{:08b} '.format(letter))
-    return ''.join(binary_representation)
+    return {'easy_printed_value':''.join(binary_representation)}
 
 def decode_devicestate(message):
     ''' 
@@ -299,6 +299,38 @@ def decode_echo(message):
     firmware_version = str(firmware_version)
     firmware_version = firmware_version[:-3] + '.' + firmware_version[-3:]
     return {'echoed_byte':echoed_byte, 'device_type':device_type, 'hardware_version':hardware_version, 'firmware_version':firmware_version, 'serial_number':serial_number}
+
+def decode_waitmonitor(message):
+    ''' 
+    Decodes the waitmonitor type message. This is in development and should not
+    concern you.
+
+    Parameters
+    ----------
+    message : bytes
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
+
+    Returns
+    -------
+    str
+        The decoded binary digits of the message represented in a string
+
+    Notes
+    -----
+    Below is the bitwise layout of the encoded command. The FPGA INDEX
+    corresponds to the message bit index as written in Lucid HDL (hardware
+    design language).    
+    Messagein identifier:  1 byte: 102
+    Message format:                     BITS USED   FPGA INDEX.
+    printed message:    8 bytes [0:8]   64 bits     [0+:64]     '''
+    # binary_representation = []
+    # for letter in message[::-1]:
+    #     binary_representation.append('{:08b} '.format(letter))
+    # return {'easy_printed_value':''.join(binary_representation)}
+    wait_duration, =    struct.unpack('<Q', message[:8])
+    return {'wait_duration':wait_duration}
+
 #########################################################
 # encode
 def encode_echo(byte_to_echo):
@@ -987,7 +1019,8 @@ msgin_decodeinfo = {
     102:{'message_length':9,    'decode_function':decode_easyprint,         'message_type':'print'},
     103:{'message_length':18,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
     104:{'message_length':4,    'decode_function':decode_notification,      'message_type':'notification'},
-    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'}
+    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'},
+    106:{'message_length':9,    'decode_function':decode_waitmonitor,       'message_type':'waitmonitor'}
     }
 
 # This is a "reverse lookup" dictionaty for the msgin_decodeinfo. I don't think I use this much/at all. It can probably be deleted.

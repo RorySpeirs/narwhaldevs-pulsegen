@@ -288,6 +288,12 @@ def specific_count(pg):
 
     pg.write_action(trigger_now=True)
 
+def wait_monitor_development(pg):
+
+    pg.write_action(request_powerline_state=True)
+    print(pg.read_all_messages(timeout=1))
+
+
 if __name__ == "__main__":
 
     pg = ndpulsegen.PulseGenerator()
@@ -305,7 +311,8 @@ if __name__ == "__main__":
     # fully_load_ram_test(pg)                  
     # test_notifications(pg)
     # pcb_connection_check(pg)
-    current_address_problem(pg)
+    # current_address_problem(pg)
+    wait_monitor_development(pg)
 
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
