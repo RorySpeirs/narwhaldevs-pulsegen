@@ -126,7 +126,7 @@ def decode_devicestate(message):
     current ram address:2 bytes [13:15] 16 bits     [104+:16]   unsigned int.
     tags:               2 byte  [15:17] 9 bits      [120+:8]    unsigned int.
         run mode                        1 bit       [120]   
-        trigger mode                    2 bit       [121+:2] 
+        accept hardware trigger         2 bit       [121+:2] 
         notify on main trig             1 bit       [123]   
         clock source                    1 bit       [124]   
         running                         1 bit       [125]
@@ -143,7 +143,7 @@ def decode_devicestate(message):
     tags, =                 struct.unpack('<Q', message[15:17] + bytes(6))
 
     run_mode_tag =                  (tags >> 0) & 0b1            
-    trigger_source_tag =            (tags >> 1) & 0b11              
+    accept_hardware_trigger_tag =   (tags >> 1) & 0b11              
     notify_on_main_trig_out_tag =   (tags >> 3) & 0b1    
     clock_source_tag =              (tags >> 4) & 0b1  
     running_tag =                   (tags >> 5) & 0b1  
@@ -151,14 +151,14 @@ def decode_devicestate(message):
     hardware_run_enable_tag =       (tags >> 7) & 0b1
     notify_on_run_finished_tag =    (tags >> 8) & 0b1    
     run_mode =                  decode_lookup['run_mode'][run_mode_tag]
-    trigger_source =            decode_lookup['trigger_source'][trigger_source_tag]
+    accept_hardware_trigger =   decode_lookup['accept_hardware_trigger'][accept_hardware_trigger_tag]
     notify_on_main_trig_out =   decode_lookup['notify_on_main_trig_out'][notify_on_main_trig_out_tag]
     clock_source =              decode_lookup['clock_source'][clock_source_tag]
     running =                   decode_lookup['running'][running_tag]
     software_run_enable =       decode_lookup['software_run_enable'][software_run_enable_tag]
     hardware_run_enable =       decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
     notify_on_run_finished =    decode_lookup['notify_on_run_finished'][notify_on_run_finished_tag]
-    return {'state':state, 'final_ram_address':final_ram_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'trigger_source':trigger_source, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_out_length':trigger_out_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
+    return {'state':state, 'final_ram_address':final_ram_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'accept_hardware_trigger':accept_hardware_trigger, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_out_length':trigger_out_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
 
 def decode_powerlinestate(message):
     ''' 
@@ -1033,7 +1033,7 @@ decode_lookup = {
     'notify_on_main_trig_out':{1:True, 0:False},
     'notify_on_run_finished':{1:True, 0:False},
     'run_mode':{0:'single', 1:'continuous'},
-    'trigger_source':{0:'software', 1:'hardware', 2:'either', 3:'single_hardware'},
+    'accept_hardware_trigger':{0:'never', 1:'always', 2:'single_run', 3:'once'},
     'trig_on_powerline':{1:True, 0:False},
     'powerline_locked':{1:True, 0:False},
     'address_notify':{1:True, 0:False},

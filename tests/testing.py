@@ -296,21 +296,37 @@ def wait_monitor_development(pg):
 def hardware_trig_acceptance(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
     instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], stop_and_wait=True)
+    instr1 = ndpulsegen.transcode.encode_instruction(1, 2, [0, 1, 0], stop_and_wait=True)
     instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
     instr3 = ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0])
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
+
+    # pg.write_action(reset_run=True)
+    [print(key,':',value) for key, value in pg.get_state().items() if key in ('current_address', 'accept_hardware_trigger')]
+
     # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+    ## It all seems to be working.
     
     # pg.write_action(trigger_now=True)
     # time.sleep(1)
     # pg.write_action(trigger_now=True)
+    [print(key,':',value) for key, value in pg.get_state().items() if key in ('current_address', 'accept_hardware_trigger')]
+    # [print(key,':',value) for key, value in pg.get_state().items()]
+    
+
+    # last_address = -1
+    # while True:
+    #     current_address = pg.get_state()['current_address']
+    #     if current_address != last_address:
+    #         print(f'current_address: {current_address}')
+    #         last_address = current_address
 
 if __name__ == "__main__":
 
