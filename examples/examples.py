@@ -39,7 +39,7 @@ def software_trig(pg):
     # Or they can be written all at once, which is usually much faster
     instructions = [instr0, instr1, instr3, instr2] #Note that the instructions don't need to be loaded in order, since you specify a RAM address explicitly.
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
  
     print(pg.read_all_messages(timeout=0.1))
@@ -53,7 +53,7 @@ def hardware_trig(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='hardware', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
 
 def run_mode_continuous(pg):
@@ -65,7 +65,7 @@ def run_mode_continuous(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     time.sleep(3)
@@ -78,7 +78,7 @@ def abort_run(pg):
     instructions = [instr0, instr1]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=1, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=1, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     time.sleep(5)
@@ -94,7 +94,7 @@ def run_enable_software(pg):
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     
     pg.write_action(trigger_now=True)
     time.sleep(1)
@@ -114,7 +114,7 @@ def run_enable_hardware(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     print('Try dragging the hardware run_enable pin to ground. It will stop the looping process.')
@@ -138,7 +138,7 @@ def get_state(pg):
 
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     # state = pg.get_state()
@@ -168,7 +168,7 @@ def notify_when_finished(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     #Note. Last instruction is 3 seconds, and even though the loop mode is continuous, the run will only run once because we will send a disable_after_current_run=True before the end of the first run
     pg.write_device_options(notify_when_run_finished=True)
 
@@ -187,7 +187,7 @@ def notify_on_specific_instructions(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     print(pg.return_on_notification(address=1, timeout=1))
@@ -206,7 +206,7 @@ def trigger_delay_and_duration_and_notify_on_main_trigger(pg):
     pg.write_instructions(instructions)
     
     #See that notify_on_main_trig_out=True, AND we are delaying the trigger by 2cycles, AND we have made the hardware trigger out stay high for 3cycles
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=3, trigger_out_delay=2, notify_on_main_trig_out=True, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=3, trigger_out_delay=2, notify_on_main_trig_out=True, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     print('Run started...')
@@ -223,7 +223,7 @@ def trig_out_on_specific_instructions(pg):
     instr3 =  ndpulsegen.encode_instruction(3, 3, [0, 0, 0], hardware_trig_out=True)    #This one will too.
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=80, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=80, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
 def stop_and_wait_on_specific_instructions(pg):
@@ -237,7 +237,7 @@ def stop_and_wait_on_specific_instructions(pg):
     instr4 =  ndpulsegen.encode_instruction(4, 1, [0, 0, 0])                                              #Again, 4 is loaded but not executed, but will be upon the next trigger.
     instructions = [instr0, instr1, instr2, instr3, instr4]
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=4, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+    pg.write_device_options(final_ram_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     print(pg.return_on_notification(address=1, timeout=5))
@@ -260,7 +260,7 @@ def using_loops_normally(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     print(pg.read_all_messages(timeout=0.1))
@@ -285,7 +285,7 @@ def using_loops_advanced(pg):
     instructions = [instr0, instr1, instr2, instr3, instr_a, instr_b, instr_c, instr_d]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     print(pg.read_all_messages(timeout=0.1))
@@ -302,7 +302,7 @@ def powerline_test_global_setting(pg):
     instructions = [instr0, instr1, instr3, instr2, instr4]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=4, run_mode='single', trigger_source='software', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=0)
     # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
@@ -332,7 +332,7 @@ def powerline_sync_instruction_single_run(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
 
@@ -358,7 +358,7 @@ def powerline_sync_instruction_continuous_run(pg):
     instructions = [clone_instr3, instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=4, run_mode='continuous', trigger_source='software', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=4, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
 
     pg.write_action(trigger_now=True)
@@ -375,7 +375,7 @@ def put_into_and_recover_from_erroneous_state(pg):
     instructions = [instr0, instr1, instr2, instr3, instr_hang]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     '''Up to this point, everything is fine and normal. The device will execute instructions 0, 1, 2 in ~200microseconds, and then
@@ -425,7 +425,7 @@ def quick_test(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     [print(key,':',value) for key, value in pg.get_state().items()]
@@ -440,7 +440,7 @@ if __name__ == "__main__":
 
     # quick_test(pg)
 
-    # software_trig(pg)
+    software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
@@ -449,7 +449,7 @@ if __name__ == "__main__":
     # get_state(pg)           #There is a bit of an oddity in "current_address". The state reads what is currently displayed, but the current_address reads what will be executed next
     # set_static_state(pg)
     # notify_when_finished(pg)
-    notify_on_specific_instructions(pg)
+    # notify_on_specific_instructions(pg)
     # trigger_delay_and_duration_and_notify_on_main_trigger(pg)
     # trig_out_on_specific_instructions(pg)
     # stop_and_wait_on_specific_instructions(pg)

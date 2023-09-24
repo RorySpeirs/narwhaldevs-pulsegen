@@ -455,7 +455,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     tags =                      struct.pack('<Q', tags)[:1]
     return message_identifier + powerline_trigger_delay + tags
 
-def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
+def encode_device_options(final_ram_address=None, run_mode=None, accept_hardware_trigger=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
     """ 
     Generates the command to change most the global settings, encoded in a 
     format that is readable by the Pulse Gen FPGA design. All arguments are
@@ -476,19 +476,17 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         the final instruction. If `run_mode`=='continuous', after the last cycle
         of the final instruction, the device will immediately execute the
         instruction at address 0, and the entire run will begin again.
-    trigger_source : {'software', 'hardware', 'either', 'single_hardware'}, 
-            optional
+    accept_hardware_trigger : {'never', 'always', 'single_run', 'once'}, optional
         Controls the accecpted source of input triggers that start or restart a
-        run. If `trigger_source`='software', then all hardware input trigger
-        signals are ignored, and the input trigger can only be activated using a
-        software trigger, which is generated with the `encode_action' function
-        with argument `trigger_now`=True. If `trigger_source`='hardware' the
-        opposite is the case; all software triggers are ignored, and only
-        harware input trigger signals start or restart a run. If 
-        `trigger_source`='either' both software and hardware input triggers are
-        accepted. If `trigger_source`='single_hardware', then the device
-        accecpts a single hardware trigger, after which it automatically reverts
-        to `trigger_source`='software'.
+        run. Software triggers are always accepted. 
+        If 'never', then all hardware input trigger signals are ignored, and the
+        input trigger can only be activated using a software trigger, which is 
+        generated with the `encode_action' function with argument 'trigger_now'=True. 
+        If 'always' hardware input triggers are always accepted.
+        If 'single_run', then the device accecpts hardware triggers for one complete
+        run, after which it automatically reverts to `accept_hardware_trigger`='never'.        
+        If 'once', then the device accecpts a single (successful) hardware trigger,
+        after which it automatically reverts to `accept_hardware_trigger`='never'.
     trigger_out_length: int, optional
         `trigger_out_length` ∈ [0, 255].
         Controls the duration of hardware output trigger pulse, for both the
@@ -609,7 +607,7 @@ def encode_device_options(final_ram_address=None, run_mode=None, trigger_source=
         raise TypeError(err_msg)
     # Tag arguments are not explicitly validated. Errors are caught in the dictionary lookup
     run_mode_tag =                  encode_lookup['run_mode'][run_mode] << 0
-    trigger_source_tag =            encode_lookup['trigger_source'][trigger_source] << 2
+    trigger_source_tag =            encode_lookup['accept_hardware_trigger'][accept_hardware_trigger] << 2
     notify_on_main_trig_out_tag =   encode_lookup['notify_on_trig'][notify_on_main_trig_out] << 5
     software_run_enable_tag =       encode_lookup['software_run_enable'][software_run_enable] << 10
     notify_when_run_finished_tag =  encode_lookup['notify_when_finished'][notify_when_run_finished] << 12
@@ -1059,7 +1057,7 @@ msgout_identifier = {
 
 encode_lookup = {
     'run_mode':{'single':0b10, 'continuous':0b11, None:0b00},
-    'trigger_source':{'software':0b100, 'hardware':0b101, 'either':0b110, 'single_hardware':0b111, None:0b000},
+    'accept_hardware_trigger':{'never':0b100, 'always':0b101, 'single_run':0b110, 'once':0b111, None:0b000},
     'notify_when_finished':{True:0b11, False:0b10, None:0b00},
     'notify_on_trig':{True:0b11, False:0b10, None:0b00},
     'software_run_enable':{True:0b11, False:0b10, None:0b00}, 

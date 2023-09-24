@@ -20,7 +20,7 @@ instructions = [instr0, instr1, instr2, instr3]
 pg.write_instructions(instructions)
 
 # Adjust all the setting options of the hardware to match what you want. Only some options are shown here.
-pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software')
+pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never')
 
 # Trigger the device in software to start it running
 pg.write_action(trigger_now=True)

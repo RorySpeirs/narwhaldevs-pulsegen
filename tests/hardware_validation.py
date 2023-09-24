@@ -19,7 +19,7 @@ def software_trig(pg):
     instr2 = ndpulsegen.transcode.encode_instruction(2,2,0b100000000000000000001111)
     instr3 = ndpulsegen.transcode.encode_instruction(3,3,0b0)
     pg.write_instructions([instr0, instr1, instr3, instr2])
-    pg.write_device_options(final_ram_address=3, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
@@ -31,7 +31,7 @@ def simple_sequence(pg):
         instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,1,[1, 1]))
         instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,1,[0, 0]))
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
+    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
@@ -120,7 +120,7 @@ def random_sequence(pg, seed=19870909):
         instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, duration=duration, state=state, goto_address=goto_address, goto_counter=goto_counter))
 
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address, run_mode='single', trigger_source='software', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
+    pg.write_device_options(final_ram_address=ram_address, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
 
     # This is all I had to add to incorporate the pulsegen emulator. But if i want it to do anything, I need to add goto's and goto counters
     decoded_instructions = decode_instructions(instructions)
