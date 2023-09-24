@@ -293,6 +293,24 @@ def wait_monitor_development(pg):
     pg.write_action(request_powerline_state=True)
     print(pg.read_all_messages(timeout=1))
 
+def hardware_trig_acceptance(pg):
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
+    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], stop_and_wait=True)
+    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
+    instr3 = ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0])
+
+    instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    
+    # pg.write_action(trigger_now=True)
+    # time.sleep(1)
+    # pg.write_action(trigger_now=True)
 
 if __name__ == "__main__":
 
@@ -312,7 +330,8 @@ if __name__ == "__main__":
     # test_notifications(pg)
     # pcb_connection_check(pg)
     # current_address_problem(pg)
-    wait_monitor_development(pg)
+    # wait_monitor_development(pg)
+    hardware_trig_acceptance(pg)
 
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
