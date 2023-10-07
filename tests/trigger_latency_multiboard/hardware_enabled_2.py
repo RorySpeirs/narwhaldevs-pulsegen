@@ -26,7 +26,7 @@ def run_output_constantly(pg):
 
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=1, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=1, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     print()
     [print(key,':',value) for key, value in pg.get_state().items()]

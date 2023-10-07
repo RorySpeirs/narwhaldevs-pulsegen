@@ -158,9 +158,9 @@ class PulseGenerator():
         command = transcode.encode_echo(byte_to_echo)
         self.write_command(command)
 
-    def write_device_options(self, final_ram_address=None, run_mode=None, accept_hardware_trigger=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
+    def write_device_options(self, final_address=None, run_mode=None, accept_hardware_trigger=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
         '''For more documentation, see ndpulsegen.transcode.encode_device_options '''
-        command = transcode.encode_device_options(final_ram_address, run_mode, accept_hardware_trigger, trigger_out_length, trigger_out_delay, notify_on_main_trig_out, notify_when_run_finished, software_run_enable)
+        command = transcode.encode_device_options(final_address, run_mode, accept_hardware_trigger, trigger_out_length, trigger_out_delay, notify_on_main_trig_out, notify_when_run_finished, software_run_enable)
         self.write_command(command)
 
     def write_powerline_trigger_options(self, trigger_on_powerline=None, powerline_trigger_delay=None):

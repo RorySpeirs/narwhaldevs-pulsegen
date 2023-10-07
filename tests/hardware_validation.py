@@ -19,7 +19,7 @@ def software_trig(pg):
     instr2 = ndpulsegen.transcode.encode_instruction(2,2,0b100000000000000000001111)
     instr3 = ndpulsegen.transcode.encode_instruction(3,3,0b0)
     pg.write_instructions([instr0, instr1, instr3, instr2])
-    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
@@ -27,11 +27,11 @@ def software_trig(pg):
 def simple_sequence(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instructions = []
-    for ram_address in range(0, 8192, 2):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,1,[1, 1]))
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,1,[0, 0]))
+    for address in range(0, 8192, 2):
+        instructions.append(ndpulsegen.transcode.encode_instruction(address,1,[1, 1]))
+        instructions.append(ndpulsegen.transcode.encode_instruction(address+1,1,[0, 0]))
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
+    pg.write_device_options(final_address=address+1, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
@@ -108,19 +108,19 @@ def random_sequence(pg, seed=19870909):
     goto_counters[0] = 0 #Dont make the first address loop to itself
 
     max_loopback_distance = 10    
-    goto_addresses = [np.random.randint(max(0, ram_address-max_loopback_distance), ram_address, size=1)[0] for ram_address in range(1, instruction_num)]
+    goto_addresses = [np.random.randint(max(0, address-max_loopback_distance), address, size=1)[0] for address in range(1, instruction_num)]
     goto_addresses.insert(0, 0)
 
-    for ram_address, (duration, goto_address, goto_counter) in enumerate(zip(durations, goto_addresses, goto_counters)):
-        if ram_address == instruction_num-1:
+    for address, (duration, goto_address, goto_counter) in enumerate(zip(durations, goto_addresses, goto_counters)):
+        if address == instruction_num-1:
             state = np.zeros(24, dtype=np.int)   #just makes them all go low in theyre final state (helps with triggering off a single pulse)
         else:
             state = np.random.randint(0, high=2, size=24, dtype=int)         
-        states[ram_address, :] = state
-        instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, duration=duration, state=state, goto_address=goto_address, goto_counter=goto_counter))
+        states[address, :] = state
+        instructions.append(ndpulsegen.transcode.encode_instruction(address=address, duration=duration, state=state, goto_address=goto_address, goto_counter=goto_counter))
 
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
+    pg.write_device_options(final_address=address, run_mode='single', accept_hardware_trigger='never', trigger_out_delay=0, notify_on_main_trig_out=False, trigger_out_length=1)
 
     # This is all I had to add to incorporate the pulsegen emulator. But if i want it to do anything, I need to add goto's and goto counters
     decoded_instructions = decode_instructions(instructions)

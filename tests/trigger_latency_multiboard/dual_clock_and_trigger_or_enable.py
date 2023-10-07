@@ -31,7 +31,7 @@ def generate_clock_and_enable(pg):
 
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=7, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=7, run_mode='continuous', trigger_source='software', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     print('Try dragging the hardware run_enable pin to ground. It will stop the looping process.')

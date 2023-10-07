@@ -50,7 +50,7 @@ def cause_timeout_on_message_forward(pg):
     instr1 = ndpulsegen.transcode.encode_instruction(1, 1, 0b10101010)
     instructions = [instr0, instr1]
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=1, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=1, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
 
     pg.write_instructions(instructions)
@@ -63,18 +63,18 @@ def cause_timeout_on_message_forward(pg):
 def fully_load_ram_test(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
     instructions = []
-    for ram_address in range(0, 8192, 2):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address, 1, [1, 1, 1]))
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1, 1, [0, 0, 0]))
+    for address in range(0, 8192, 2):
+        instructions.append(ndpulsegen.transcode.encode_instruction(address, 1, [1, 1, 1]))
+        instructions.append(ndpulsegen.transcode.encode_instruction(address+1, 1, [0, 0, 0]))
 
     tstart = time.time()
     pg.write_instructions(instructions)
     tend = time.time()
 
     time_total = tend-tstart
-    print('Time required to load the RAM FULL of instructions = {:.2f} ms \nWhich is {:.2f} instructions/ms \nOr {:.2f} μs/instruction '.format(time_total*1E3, (ram_address+1)/(time_total*1E3), (time_total*1E6)/(ram_address+1)))
+    print('Time required to load the RAM FULL of instructions = {:.2f} ms \nWhich is {:.2f} instructions/ms \nOr {:.2f} μs/instruction '.format(time_total*1E3, (address+1)/(time_total*1E3), (time_total*1E6)/(address+1)))
 
-    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=address+1, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
     print(pg.read_all_messages(timeout=1))
 
@@ -88,11 +88,11 @@ def test_notifications(pg):
     # instruction_number = 512
     instruction_number = 5
 
-    for ram_address in range(0, instruction_number):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address, 1, [1, 1, 1], notify_computer=True))
+    for address in range(0, instruction_number):
+        instructions.append(ndpulsegen.transcode.encode_instruction(address, 1, [1, 1, 1], notify_computer=True))
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=instruction_number-1, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+    pg.write_device_options(final_address=instruction_number-1, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
     print(pg.read_all_messages(timeout=2))
@@ -123,7 +123,7 @@ def pcb_connection_check(pg):
 
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=23, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=23, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     pg.write_action(trigger_now=True)
     kb = ndpulsegen.console_read.KBHit()
     print('Press \'Esc\' to stop.')
@@ -153,7 +153,7 @@ def current_address_problem(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     
 
     '''Testing the get state notification'''
@@ -186,7 +186,7 @@ def quick_check(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     
 
     # '''Testing the get state notification'''
@@ -219,7 +219,7 @@ def quick_count(pg):
 
     # pg.write_action(reset_run=True)
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=2**10, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=2**10, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
 
@@ -284,14 +284,10 @@ def specific_count(pg):
     # instructions.append(ndpulsegen.transcode.encode_instruction(18, 1, [1,1,1,1,1,1,1,1,0,0]))
     # instructions.append(ndpulsegen.transcode.encode_instruction(19, 1, [0,0,0,0,0,0,0,0,0,0]))
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=len(instructions)-1, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=len(instructions)-1, run_mode='continuous', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
 
-def wait_monitor_development(pg):
-
-    pg.write_action(request_powerline_state=True)
-    print(pg.read_all_messages(timeout=1))
 
 def hardware_trig_acceptance(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
@@ -307,10 +303,10 @@ def hardware_trig_acceptance(pg):
     # pg.write_action(reset_run=True)
     [print(key,':',value) for key, value in pg.get_state().items() if key in ('current_address', 'accept_hardware_trigger')]
 
-    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_ram_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     ## It all seems to be working.
     
@@ -327,6 +323,47 @@ def hardware_trig_acceptance(pg):
     #     if current_address != last_address:
     #         print(f'current_address: {current_address}')
     #         last_address = current_address
+
+
+def wait_monitor_development(pg):
+    instructions = []
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    instructions.append(ndpulsegen.transcode.encode_instruction(0, 2, [1, 1, 1], notify_computer=True, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(1, 2, [0, 1, 0], notify_computer=True, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1, 1, 0], notify_computer=True, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0], notify_computer=True, stop_and_wait=False))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(4, 2, [1, 0, 0], notify_computer=True, stop_and_wait=False))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(5, 2, [0, 0, 0], notify_computer=True, stop_and_wait=False))
+
+    # OK, that works. Now see if you can get rid of the separate notification address.
+
+
+    # instructions = [instr0, instr1, instr2, instr3, instr4]
+    # instructions = [instr0, instr1, instr2, instr3]
+    pg.write_instructions(instructions)
+
+    # pg.write_device_options(final_address=len(instructions)-1, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+    # pg.write_action(reset_run=True)
+    # pg.write_action(trigger_now=True)
+    # time.sleep(1)
+    # pg.write_action(trigger_now=True)
+    # pg.write_device_options(accept_hardware_trigger='single_run')
+
+    # pg.write_action(request_powerline_state=True)
+    [print(msg) for msg in pg.read_all_messages(timeout=1)]
+    [print(key,':',value) for key, value in pg.get_state().items()]
+    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+
+
+    # two things to work on:
+    # 1. if zero duration instruction is detected, I could reset the run.
+    # 2. I could have the run_time accessable by settings.
+
 
 if __name__ == "__main__":
 
@@ -346,8 +383,8 @@ if __name__ == "__main__":
     # test_notifications(pg)
     # pcb_connection_check(pg)
     # current_address_problem(pg)
-    # wait_monitor_development(pg)
-    hardware_trig_acceptance(pg)
+    wait_monitor_development(pg)
+    # hardware_trig_acceptance(pg)
 
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)

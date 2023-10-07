@@ -33,10 +33,11 @@ def decode_internal_error(message):
     design language).
     Messagein identifier:  1 byte: 100
     Message format:                     BITS USED   FPGA INDEX.
-    tags:               1 byte  [0]     2 bits      [0+:2]      unsigned int.
+    tags:               1 byte  [0]     4 bits      [0+:4]      unsigned int.
         invalid_identifier_received     1 bit       [0]
         timeout_waiting_for_full_msg    1 bit       [1]  
         received_message_not_forwarded  1 bit       [2]  
+        zero_duration_instruction       1 bit       [3]  
     error information:  1 byte  [1]     8 bits      [8+:8]     unsigned int.
 
     '''
@@ -45,6 +46,7 @@ def decode_internal_error(message):
     invalid_identifier_received_tag =       (tags >> 0) & 0b1        
     timeout_waiting_for_msg_tag =           (tags >> 1) & 0b1     
     received_message_not_forwarded_tag =    (tags >> 2) & 0b1
+    zero_duration_instruction_executed_tag =(tags >> 3) & 0b1
     if error_info in decode_lookup['error_info'].keys():
         destination_subsystem = decode_lookup['error_info'][error_info]
     else:
@@ -52,7 +54,8 @@ def decode_internal_error(message):
     invalid_identifier_received =       decode_lookup['invalid_identifier'][invalid_identifier_received_tag]
     timeout_waiting_for_msg =           decode_lookup['msg_receive_timeout'][timeout_waiting_for_msg_tag]
     received_message_not_forwarded =    decode_lookup['msg_not_forwarded'][received_message_not_forwarded_tag]
-    return {'invalid_identifier_received':invalid_identifier_received, 'timeout_waiting_to_receive_message':timeout_waiting_for_msg, 'received_message_not_forwarded':received_message_not_forwarded, 'destination_subsystem':destination_subsystem}
+    zero_duration_instruction_executed =decode_lookup['zero_duration_instruction_executed'][zero_duration_instruction_executed_tag]
+    return {'invalid_identifier_received':invalid_identifier_received, 'timeout_waiting_to_receive_message':timeout_waiting_for_msg, 'received_message_not_forwarded':received_message_not_forwarded, 'zero_duration_instruction_executed':zero_duration_instruction_executed, 'destination_subsystem':destination_subsystem}
 
 def decode_easyprint(message):
     ''' 
@@ -136,10 +139,10 @@ def decode_devicestate(message):
     
     '''
     state =                 np.unpackbits(np.array([message[0], message[1], message[2]], dtype=np.uint8), bitorder='little')
-    final_ram_address, =    struct.unpack('<Q', message[3:5] + bytes(6))
-    trigger_out_delay, =        struct.unpack('<Q', message[5:12] + bytes(1))
-    trigger_out_length, =       struct.unpack('<Q', message[12:13] + bytes(7))
-    current_ram_address, =  struct.unpack('<Q', message[13:15] + bytes(6))
+    final_address, =        struct.unpack('<Q', message[3:5] + bytes(6))
+    trigger_out_delay, =    struct.unpack('<Q', message[5:12] + bytes(1))
+    trigger_out_length, =   struct.unpack('<Q', message[12:13] + bytes(7))
+    current_address, =  struct.unpack('<Q', message[13:15] + bytes(6))
     tags, =                 struct.unpack('<Q', message[15:17] + bytes(6))
 
     run_mode_tag =                  (tags >> 0) & 0b1            
@@ -158,7 +161,7 @@ def decode_devicestate(message):
     software_run_enable =       decode_lookup['software_run_enable'][software_run_enable_tag]
     hardware_run_enable =       decode_lookup['hardware_run_enable'][hardware_run_enable_tag]
     notify_on_run_finished =    decode_lookup['notify_on_run_finished'][notify_on_run_finished_tag]
-    return {'state':state, 'final_ram_address':final_ram_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'accept_hardware_trigger':accept_hardware_trigger, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_out_length':trigger_out_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_ram_address}
+    return {'state':state, 'final_address':final_address, 'trigger_out_delay':trigger_out_delay, 'run_mode':run_mode, 'accept_hardware_trigger':accept_hardware_trigger, 'notify_on_main_trig_out':notify_on_main_trig_out, 'notify_on_run_finished':notify_on_run_finished, 'trigger_out_length':trigger_out_length, 'clock_source':clock_source, 'running':running, 'software_run_enable':software_run_enable, 'hardware_run_enable':hardware_run_enable, 'current_address':current_address}
 
 def decode_powerlinestate(message):
     ''' 
@@ -212,7 +215,8 @@ def decode_notification(message):
     ''' 
     Decodes the notification type message, which contains information about what
     caused the notification, and what instruction address the device was reading 
-    at the time.
+    at the time, and the total run time up to that point, with includes any time
+    spent stopped and waiting to be re-triggered.
 
     Parameters
     ----------
@@ -240,21 +244,23 @@ def decode_notification(message):
     design language).
     Messagein identifier:  1 byte: 104
     Message format:                             BITS USED   FPGA INDEX.
-    current instruction address:2 bytes [0:2]   16 bits     [0+:16]   unsigned int.
-    tags:                       1 byte  [2]     3 bits      [16+:3]   
+    total run time:             7 bytes [0:7]   56 bits     [0+:56]   unsigned int.
+    current instruction address:2 bytes [7:9]   16 bits     [56+:16]  unsigned int.
+    tags:                       1 byte  [9]     3 bits      [72+:3]   
         instriction notify tag                  1 bit       [16] 
         trigger notify tag                      1 bit       [17] 
         end of run notify tag                   1 bit       [18] 
     '''
-    address_of_notification, =  struct.unpack('<Q', message[0:2] + bytes(6))
-    tags, =                     struct.unpack('<Q', message[2:3] + bytes(7))
+    total_run_time, =           struct.unpack('<Q', message[0:7] + bytes(1))
+    address_of_notification, =  struct.unpack('<Q', message[7:9] + bytes(6))
+    tags, =                     struct.unpack('<Q', message[9:10] + bytes(7))
     address_notify_tag =    (tags >> 0) & 0b1
     trig_notify_tag =       (tags >> 1) & 0b1
     finished_notify_tag =   (tags >> 2) & 0b1
     address_notify =    decode_lookup['address_notify'][address_notify_tag]
     trig_notify =       decode_lookup['trig_notify'][trig_notify_tag]
-    finished_notify =        decode_lookup['finished_notify'][finished_notify_tag]
-    return {'address':address_of_notification, 'address_notify':address_notify, 'trigger_notify':trig_notify, 'finished_notify':finished_notify}
+    finished_notify =   decode_lookup['finished_notify'][finished_notify_tag]
+    return {'run_time':total_run_time, 'address':address_of_notification, 'address_notify':address_notify, 'trigger_notify':trig_notify, 'finished_notify':finished_notify}
 
 def decode_echo(message):
     '''
@@ -299,37 +305,6 @@ def decode_echo(message):
     firmware_version = str(firmware_version)
     firmware_version = firmware_version[:-3] + '.' + firmware_version[-3:]
     return {'echoed_byte':echoed_byte, 'device_type':device_type, 'hardware_version':hardware_version, 'firmware_version':firmware_version, 'serial_number':serial_number}
-
-def decode_waitmonitor(message):
-    ''' 
-    Decodes the waitmonitor type message. This is in development and should not
-    concern you.
-
-    Parameters
-    ----------
-    message : bytes
-        The encoded bytes sent by the Pulse Gen, not including the message
-        identifier.
-
-    Returns
-    -------
-    str
-        The decoded binary digits of the message represented in a string
-
-    Notes
-    -----
-    Below is the bitwise layout of the encoded command. The FPGA INDEX
-    corresponds to the message bit index as written in Lucid HDL (hardware
-    design language).    
-    Messagein identifier:  1 byte: 102
-    Message format:                     BITS USED   FPGA INDEX.
-    printed message:    8 bytes [0:8]   64 bits     [0+:64]     '''
-    # binary_representation = []
-    # for letter in message[::-1]:
-    #     binary_representation.append('{:08b} '.format(letter))
-    # return {'easy_printed_value':''.join(binary_representation)}
-    wait_duration, =    struct.unpack('<Q', message[:8])
-    return {'wait_duration':wait_duration}
 
 #########################################################
 # encode
@@ -455,7 +430,7 @@ def encode_powerline_trigger_options(trigger_on_powerline=None, powerline_trigge
     tags =                      struct.pack('<Q', tags)[:1]
     return message_identifier + powerline_trigger_delay + tags
 
-def encode_device_options(final_ram_address=None, run_mode=None, accept_hardware_trigger=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
+def encode_device_options(final_address=None, run_mode=None, accept_hardware_trigger=None, trigger_out_length=None, trigger_out_delay=None, notify_on_main_trig_out=None, notify_when_run_finished=None, software_run_enable=None):
     """ 
     Generates the command to change most the global settings, encoded in a 
     format that is readable by the Pulse Gen FPGA design. All arguments are
@@ -464,13 +439,13 @@ def encode_device_options(final_ram_address=None, run_mode=None, accept_hardware
 
     Parameters
     ----------
-    final_ram_address : int, optional
-        `final_ram_address` ∈ [0, 8191].
+    final_address : int, optional
+        `final_address` ∈ [0, 8191].
         The address of the final instruction that is executed in a run. After
         this instruction has completed, the run will stop or restart, depending
         on the `run_mode` setting.
     run_mode : {'single', 'continuous'}, optional
-        After completing of the instruction specified by `final_ram_address`,
+        After completing of the instruction specified by `final_address`,
         if `run_mode`='single' the device will immediately stop counting down to
         the next instruction, and all channels will retain the output state of
         the final instruction. If `run_mode`=='continuous', after the last cycle
@@ -557,7 +532,7 @@ def encode_device_options(final_ram_address=None, run_mode=None, accept_hardware
     design language).
     Messageout identifier:  1 byte: 154
     Message format:                             BITS USED   FPGA INDEX.
-    final_RAM_address:          2 bytes [0:2]   16 bits     [0+:16]     uint.
+    final_address:              2 bytes [0:2]   16 bits     [0+:16]     uint.
     trigger_out_delay:          7 bytes [2:9]   56 bits     [16+:56]    uint.
     trigger_out_length:         1 byte  [9]     8 bits      [72+:8]     uint.
     
@@ -565,23 +540,23 @@ def encode_device_options(final_ram_address=None, run_mode=None, accept_hardware
         run_mode                                2 bit       [80+:2]     [80]: run mode, [81]:update flag
         trigger_source                          3 bits      [82+:3]     [82+:2]: trig mode, [84]:update flag
         trigger_notification_enable             2 bit       [85+:2]     [85]: trig notif, [86]:update flag
-        update_flag:final_RAM_address           1 bit       [87]
+        update_flag:final_address               1 bit       [87]
         update_flag:trigger_out_delay           1 bit       [88]
         update_flag:trigger_out_length          1 bit       [89]
         software_run_enable                     2 bit       [90+:2]     [90]: software_run_enable, [91]:update flag
         notify_when_run_finished                2 bit       [92+:2]     [92]: notify_when_run_finished, [93]:update flag
     """
     # Type and value checking
-    if isinstance(final_ram_address, (int, np.integer)):
-        update_final_ram_address_tag = 1 << 7
-        if final_ram_address < 0 or final_ram_address > 8191:
-            err_msg = f'\'final_ram_address\' out of range. Must be in must be range [0, 8191]'
+    if isinstance(final_address, (int, np.integer)):
+        update_final_address_tag = 1 << 7
+        if final_address < 0 or final_address > 8191:
+            err_msg = f'\'final_address\' out of range. Must be in must be range [0, 8191]'
             raise ValueError(err_msg)
-    elif final_ram_address is None:
-        final_ram_address = 0
-        update_final_ram_address_tag = 0
+    elif final_address is None:
+        final_address = 0
+        update_final_address_tag = 0
     else:
-        err_msg = f'\'final_ram_address\' must be an int or np.integer, not a {type(final_ram_address).__name__}'
+        err_msg = f'\'final_address\' must be an int or np.integer, not a {type(final_address).__name__}'
         raise TypeError(err_msg)
     if isinstance(trigger_out_delay, (int, np.integer)):
         update_trigger_out_delay_tag = 1 << 8
@@ -611,13 +586,13 @@ def encode_device_options(final_ram_address=None, run_mode=None, accept_hardware
     notify_on_main_trig_out_tag =   encode_lookup['notify_on_trig'][notify_on_main_trig_out] << 5
     software_run_enable_tag =       encode_lookup['software_run_enable'][software_run_enable] << 10
     notify_when_run_finished_tag =  encode_lookup['notify_when_finished'][notify_when_run_finished] << 12
-    tags = run_mode_tag | trigger_source_tag | notify_on_main_trig_out_tag | update_final_ram_address_tag | update_trigger_out_delay_tag | update_trigger_out_length_tag | software_run_enable_tag | notify_when_run_finished_tag
+    tags = run_mode_tag | trigger_source_tag | notify_on_main_trig_out_tag | update_final_address_tag | update_trigger_out_delay_tag | update_trigger_out_length_tag | software_run_enable_tag | notify_when_run_finished_tag
     message_identifier =    struct.pack('B', msgout_identifier['device_options'])
-    final_ram_address =     struct.pack('<Q', final_ram_address)[:2]
+    final_address =         struct.pack('<Q', final_address)[:2]
     trigger_out_delay =     struct.pack('<Q', trigger_out_delay)[:7]
     trigger_out_length =    struct.pack('<Q', trigger_out_length)[:1]
     tags =                  struct.pack('<Q', tags)[:2]
-    return message_identifier + final_ram_address + trigger_out_delay + trigger_out_length + tags
+    return message_identifier + final_address + trigger_out_delay + trigger_out_length + tags
 
 def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False):
     """
@@ -657,7 +632,7 @@ def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=
         run is in an unrecoverable state because the timing instructions do 
         not form a consistant sequence. An example of an "inconsistant sequence"
         would be if instructons with addresses 0, 1, 2 are uploaded, but the 
-        `final_ram_address` setting was set to 3.
+        `final_address` setting was set to 3.
     request_state : bool, optional
         If True, the Pulse Gen will immediately attempt to send a `devicestate`
         message back to the host computer. The order and timing of the sent
@@ -1016,9 +991,8 @@ msgin_decodeinfo = {
     101:{'message_length':9,    'decode_function':decode_echo,              'message_type':'echo'},
     102:{'message_length':9,    'decode_function':decode_easyprint,         'message_type':'print'},
     103:{'message_length':18,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
-    104:{'message_length':4,    'decode_function':decode_notification,      'message_type':'notification'},
-    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'},
-    106:{'message_length':9,    'decode_function':decode_waitmonitor,       'message_type':'waitmonitor'}
+    104:{'message_length':11,   'decode_function':decode_notification,      'message_type':'notification'},
+    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'}
     }
 
 # This is a "reverse lookup" dictionaty for the msgin_decodeinfo. I don't think I use this much/at all. It can probably be deleted.
@@ -1042,6 +1016,7 @@ decode_lookup = {
     'invalid_identifier':{1:True, 0:False},
     'msg_not_forwarded':{1:True, 0:False},
     'msg_receive_timeout':{1:True, 0:False},
+    'zero_duration_instruction_executed':{1:True, 0:False},
     'error_info':{1:'echo', 2:'load_instruction', 3:'action', 4:'debug', 5:'device_settings', 6:'set_static_state', 7:'powerline_trigger_settings'},
     }
 

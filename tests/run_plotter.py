@@ -28,17 +28,17 @@ def random_sequence(seed=0):
     goto_counters[0] = 0 #Dont make the first address loop to itself
 
     max_loopback_distance = 5   
-    goto_addresses = [np.random.randint(max(0, ram_address-max_loopback_distance), ram_address, size=1)[0] for ram_address in range(1, instruction_num)]
+    goto_addresses = [np.random.randint(max(0, address-max_loopback_distance), address, size=1)[0] for address in range(1, instruction_num)]
     goto_addresses.insert(0, 0)
 
-    for ram_address, (duration, goto_address, goto_counter) in enumerate(zip(durations, goto_addresses, goto_counters)):
-        if ram_address == instruction_num-1:
+    for address, (duration, goto_address, goto_counter) in enumerate(zip(durations, goto_addresses, goto_counters)):
+        if address == instruction_num-1:
             # state = np.zeros(24, dtype=int)   #just makes them all go low in theyre final state (helps with triggering off a single pulse)
             pass
         else:
             state = np.random.randint(0, high=2, size=24, dtype=int)         
-        states[ram_address, :] = state
-        instructions.append(ndpulsegen.transcode.encode_instruction(address=ram_address, state=state, duration=duration, goto_address=goto_address, goto_counter=goto_counter, stop_and_wait=np.random.rand()<0.5, hardware_trig_out=np.random.rand()<0.5, notify_computer=np.random.rand()<0.5, powerline_sync=np.random.rand()<0.5))
+        states[address, :] = state
+        instructions.append(ndpulsegen.transcode.encode_instruction(address=address, state=state, duration=duration, goto_address=goto_address, goto_counter=goto_counter, stop_and_wait=np.random.rand()<0.5, hardware_trig_out=np.random.rand()<0.5, notify_computer=np.random.rand()<0.5, powerline_sync=np.random.rand()<0.5))
 
     return instructions
 

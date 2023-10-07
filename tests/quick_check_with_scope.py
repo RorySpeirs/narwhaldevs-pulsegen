@@ -21,7 +21,7 @@ def simple_short_seq(pg):
     instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
-    pg.write_device_options(final_ram_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_address=3, run_mode='continuous', accept_hardware_trigger='never', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     print(pg.get_state())
 
     pg.write_action(trigger_now=True)
@@ -42,11 +42,11 @@ def simple_short_seq(pg):
 def simple_sequence(pg):
     #address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     instructions = []
-    for ram_address in range(0, 8192, 2):
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address,[1, 1],1,0,0, False, False, False))
-        instructions.append(ndpulsegen.transcode.encode_instruction(ram_address+1,[0, 0],1,0,0, False, False, False))
+    for address in range(0, 8192, 2):
+        instructions.append(ndpulsegen.transcode.encode_instruction(address,[1, 1],1,0,0, False, False, False))
+        instructions.append(ndpulsegen.transcode.encode_instruction(address+1,[0, 0],1,0,0, False, False, False))
     pg.write_instructions(instructions)
-    pg.write_device_options(final_ram_address=ram_address+1, run_mode='single', accept_hardware_trigger='never', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
+    pg.write_device_options(final_address=address+1, run_mode='single', accept_hardware_trigger='never', trigger_time=0, notify_on_main_trig=False, trigger_length=1)
     pg.write_action(trigger_now=True)
     pg.read_all_messages(timeout=0.1)
 
