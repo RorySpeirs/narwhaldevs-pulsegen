@@ -147,6 +147,7 @@ def get_state(pg):
     # print(powerline_state)
     [print(key,':',value) for key, value in pg.get_state().items()]
     [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+    [print(key,':',value) for key, value in pg.get_state_extras().items()]
 
 def set_static_state(pg):
     # outputs are set by 24 bits of an integer. Rightmost bit is output 0.
@@ -366,6 +367,9 @@ def powerline_sync_instruction_continuous_run(pg):
     pg.write_action(disable_after_current_run=True)
 
 def put_into_and_recover_from_erroneous_state(pg):
+    '''This example needs to be re-done. Execution of an unset instruction now leads to an error and automatic reset.
+    HOWEVER. If an instruction has is already present from a previous run, you migh have unintentended instructions executed
+    which could last a long time. So you still may wish to use reset run. make the example reflect this case.'''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False\
     instr0 =  ndpulsegen.encode_instruction(0, 1, [1, 1, 1], notify_computer=True)
     instr1 =  ndpulsegen.encode_instruction(1, 1, [0, 1, 0], notify_computer=True)

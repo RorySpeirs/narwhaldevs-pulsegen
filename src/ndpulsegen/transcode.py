@@ -260,7 +260,7 @@ def decode_notification(message):
     address_notify =    decode_lookup['address_notify'][address_notify_tag]
     trig_notify =       decode_lookup['trig_notify'][trig_notify_tag]
     finished_notify =   decode_lookup['finished_notify'][finished_notify_tag]
-    return {'run_time':total_run_time, 'address':address_of_notification, 'address_notify':address_notify, 'trigger_notify':trig_notify, 'finished_notify':finished_notify}
+    return {'address':address_of_notification, 'address_notify':address_notify, 'trigger_notify':trig_notify, 'finished_notify':finished_notify, 'run_time':total_run_time}
 
 def decode_echo(message):
     '''
