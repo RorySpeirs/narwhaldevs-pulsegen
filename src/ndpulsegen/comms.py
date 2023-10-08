@@ -24,7 +24,7 @@ class PulseGenerator():
 
         self.device_type = 1 # The designator of the pulse generator
 
-        # encoding instructions is done all the time by the user. Make it also a method so peoples code can be more self contained. 
+        # encoding instructions is done all the time by the user. Make it also a method so people's code can be more self contained. 
         self.encode_instruction = transcode.encode_instruction
 
     def connect(self, serial_number=None):
@@ -168,9 +168,9 @@ class PulseGenerator():
         command = transcode.encode_powerline_trigger_options(trigger_on_powerline, powerline_trigger_delay)
         self.write_command(command)
 
-    def write_action(self, trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False):
+    def write_action(self, trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False, request_state_extras=False):
         '''For more documentation, see ndpulsegen.transcode.encode_action '''
-        command = transcode.encode_action(trigger_now, disable_after_current_run, reset_run, request_state, request_powerline_state)
+        command = transcode.encode_action(trigger_now, disable_after_current_run, reset_run, request_state, request_powerline_state, request_state_extras)
         self.write_command(command)
 
     def write_general_debug(self, message):
@@ -198,12 +198,14 @@ class PulseGenerator():
     ######################### Some functions that will help in reading, waiting, doing stuff. I am not sure how future programs will interact with this
     def read_all_messages(self, timeout=0):
         if timeout != 0:
-            t0 = time.time()
+            sleeptime = min(0.1, timeout)
             messages = []
+            t0 = time.time()
             while True:
                 messages.extend(self.read_all_current_messages())
                 if time.time() - t0 > timeout:
                     break
+                time.sleep(sleeptime)
             return messages
         else:
             return self.read_all_current_messages()
@@ -233,6 +235,18 @@ class PulseGenerator():
         state_queue.queue.clear()
         #request the state
         self.write_action(request_powerline_state=True)
+        # wait for the state to be sent
+        try:
+            return state_queue.get(timeout=1)
+        except queue.Empty as ex:
+            return None
+
+    def get_state_extras(self, timeout=None):
+        state_queue = self.msgin_queues['devicestate_extras']
+        #Empty the queue
+        state_queue.queue.clear()
+        #request the state
+        self.write_action(request_state_extras=True)
         # wait for the state to be sent
         try:
             return state_queue.get(timeout=1)

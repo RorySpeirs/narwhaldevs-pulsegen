@@ -306,6 +306,47 @@ def decode_echo(message):
     firmware_version = firmware_version[:-3] + '.' + firmware_version[-3:]
     return {'echoed_byte':echoed_byte, 'device_type':device_type, 'hardware_version':hardware_version, 'firmware_version':firmware_version, 'serial_number':serial_number}
 
+def decode_devicestate_extras(message):
+    ''' 
+    Decodes the devicestate_extras type message which contains the total run
+    time that the run has been active for. The total run time ignores instruction
+    waits, and hardware and software disables. It simply counts up at the start
+    of a run, and restarts at the start of the next run. It does not stop at the
+    end of a run.
+
+    Parameters
+    ----------
+    message : bytes
+        The encoded bytes sent by the Pulse Gen, not including the message
+        identifier.
+
+    Returns
+    -------
+    dictionary
+        The decoded message containing the total run time
+
+    See Also
+    --------
+    encode_action : The function that encodes the command which causes the Pulse
+        Gen to emit a devicestate_extras message.
+    decode_notification: The run_time is also attached to notifications, whcih are
+        initiated by the PulseGen instructions and settings.
+
+
+    Notes
+    -----
+    Below is the bitwise layout of the encoded command. The FPGA INDEX
+    corresponds to the message bit index as written in Lucid HDL (hardware
+    design language).
+    Messagein identifier:  1 byte: 105
+    Message format:                             BITS USED   FPGA INDEX.
+    total_run_time:             7 bytes [0:7]   56 bits     [0+:56]   unsigned int.
+    reserved_for_future:        1 bytes [7:8]   8  bits     [56+:8]  unsigned int.
+    '''
+    total_run_time, = struct.unpack('<Q', message[0:7] + bytes(1))
+    return {'run_time':total_run_time}
+
+
 #########################################################
 # encode
 def encode_echo(byte_to_echo):
@@ -594,7 +635,7 @@ def encode_device_options(final_address=None, run_mode=None, accept_hardware_tri
     tags =                  struct.pack('<Q', tags)[:2]
     return message_identifier + final_address + trigger_out_delay + trigger_out_length + tags
 
-def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False):
+def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=False, request_state=False, request_powerline_state=False, request_state_extras=False):
     """
     Generates action commands encoded in a format that is readable by the Pulse
     Gen FPGA design. Action commands have some immediately affect as soon as
@@ -647,6 +688,13 @@ def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=
         messages take priority over others. If a `powerlinestate` message is
         already in the device internal buffer from a previous request but has
         yet to be sent, the new request is ignored.
+    request_state_extras : bool, optional
+        If True, the Pulse Gen will immediately attempt to send a 
+        `devicestate_extras` message back to the host computer. The order and 
+        timing of the sent `devicestate_extras` message is not gaurinteed, as some
+        types of messages take priority over others. If a `devicestate_extras` 
+        message is already in the device internal buffer from a previous request but
+        has yet to be sent, the new request is ignored.
 
     Returns
     -------
@@ -677,7 +725,8 @@ def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=
         request_state                           1 bit       [1]
         request_powerline_state                 1 bit       [2]
         disable_after_current_run               1 bit       [3]
-        reset_run                               1 bit       [4] 
+        reset_run                               1 bit       [4]
+        request_state_extras                    1 bit       [5]
     """
     # Tag arguments are not explicitly validated. Errors are caught in the dictionary lookup
     trigger_now_tag =                   encode_lookup['trigger_now'][trigger_now] << 0
@@ -685,7 +734,8 @@ def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=
     request_powerline_state_tag =       encode_lookup['request_powerline_state'][request_powerline_state] << 2
     disable_after_current_run =         encode_lookup['disable_after_current_run'][disable_after_current_run] << 3
     reset_run_tag =                     encode_lookup['reset_run'][reset_run] << 4
-    tags = trigger_now_tag | request_state_tag | reset_run_tag | disable_after_current_run | request_powerline_state_tag
+    request_state_extras_tag =          encode_lookup['request_state_extras'][request_state_extras] << 5
+    tags = trigger_now_tag | request_state_tag | reset_run_tag | disable_after_current_run | request_powerline_state_tag | request_state_extras_tag
     message_identifier =    struct.pack('B', msgout_identifier['action_request'])
     tags =                  struct.pack('<Q', tags)[:1]
     return message_identifier + tags
@@ -992,7 +1042,8 @@ msgin_decodeinfo = {
     102:{'message_length':9,    'decode_function':decode_easyprint,         'message_type':'print'},
     103:{'message_length':18,   'decode_function':decode_devicestate,       'message_type':'devicestate'},
     104:{'message_length':11,   'decode_function':decode_notification,      'message_type':'notification'},
-    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'}
+    105:{'message_length':8,    'decode_function':decode_powerlinestate,    'message_type':'powerlinestate'},
+    106:{'message_length':9,    'decode_function':decode_devicestate_extras,'message_type':'devicestate_extras'}
     }
 
 # This is a "reverse lookup" dictionaty for the msgin_decodeinfo. I don't think I use this much/at all. It can probably be deleted.
@@ -1042,6 +1093,7 @@ encode_lookup = {
     'request_powerline_state':{True:1, False:0},
     'disable_after_current_run':{True:1, False:0},
     'reset_run':{True:1, False:0},
+    'request_state_extras':{True:1, False:0},
     'stop_and_wait':{True:1, False:0}, 
     'notify_on_instruction':{True:1, False:0},  
     'trig_out_on_instruction':{True:1, False:0},

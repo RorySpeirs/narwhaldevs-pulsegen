@@ -85,17 +85,17 @@ def test_notifications(pg):
     # address, state, countdown, loopto_address, loops, stop_and_wait_tag, hard_trig_out_tag, notify_computer_tag
     # pg.write_action(reset_output_coordinator=True)
     instructions = []
-    # instruction_number = 512
-    instruction_number = 5
+    instruction_number = 512
+    # instruction_number = 5
 
     for address in range(0, instruction_number):
-        instructions.append(ndpulsegen.transcode.encode_instruction(address, 1, [1, 1, 1], notify_computer=True))
+        instructions.append(ndpulsegen.transcode.encode_instruction(address, 2, [1, 1, 1], notify_computer=True))
     pg.write_instructions(instructions)
 
     pg.write_device_options(final_address=instruction_number-1, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
 
     pg.write_action(trigger_now=True)
-    print(pg.read_all_messages(timeout=2))
+    [print(msg) for msg in pg.read_all_messages(timeout=0.1)]
 
 
 def pcb_connection_check(pg):
@@ -328,42 +328,26 @@ def hardware_trig_acceptance(pg):
 def wait_monitor_development(pg):
     instructions = []
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instructions.append(ndpulsegen.transcode.encode_instruction(0, 2, [1, 1, 1], notify_computer=True, stop_and_wait=False))
-    instructions.append(ndpulsegen.transcode.encode_instruction(1, 2, [0, 1, 0], notify_computer=True, stop_and_wait=False))
-    instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1, 1, 0], notify_computer=True, stop_and_wait=False))
-    instructions.append(ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0], notify_computer=True, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1], notify_computer=False, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], notify_computer=False, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1, 1, 0], notify_computer=False, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(3, 1, [0, 0, 0], notify_computer=False, stop_and_wait=False))
     # instructions.append(ndpulsegen.transcode.encode_instruction(4, 2, [1, 0, 0], notify_computer=True, stop_and_wait=False))
     # instructions.append(ndpulsegen.transcode.encode_instruction(5, 2, [0, 0, 0], notify_computer=True, stop_and_wait=False))
-
-    # OK, that works. Now see if you can get rid of the separate notification address.
-
-
-    # instructions = [instr0, instr1, instr2, instr3, instr4]
-    # instructions = [instr0, instr1, instr2, instr3]
     pg.write_instructions(instructions)
 
     # pg.write_device_options(final_address=len(instructions)-1, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=5, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
-    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-
+    # pg.write_action(trigger_now=True)
     # pg.write_action(reset_run=True)
-    # pg.write_action(trigger_now=True)
-    # time.sleep(1)
-    # pg.write_action(trigger_now=True)
-    # pg.write_device_options(accept_hardware_trigger='single_run')
 
-    # pg.write_action(request_powerline_state=True)
-    [print(msg) for msg in pg.read_all_messages(timeout=1)]
+    [print(msg) for msg in pg.read_all_messages(timeout=0.1)]
     [print(key,':',value) for key, value in pg.get_state().items()]
-    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
-
-
-    # two things to work on:
-    # 1. if zero duration instruction is detected, I could reset the run.
-    # 2. I could have the run_time accessable by settings.
-
+    [print(key,':',value) for key, value in pg.get_state_extras().items()]
 
 if __name__ == "__main__":
 
