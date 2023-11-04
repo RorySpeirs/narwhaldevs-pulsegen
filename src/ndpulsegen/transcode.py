@@ -493,12 +493,12 @@ def encode_device_options(final_address=None, run_mode=None, accept_hardware_tri
         of the final instruction, the device will immediately execute the
         instruction at address 0, and the entire run will begin again.
     accept_hardware_trigger : {'never', 'always', 'single_run', 'once'}, optional
-        Controls the accecpted source of input triggers that start or restart a
+        Controls when hardware input triggers are accecpted that start or restart a
         run. Software triggers are always accepted. 
         If 'never', then all hardware input trigger signals are ignored, and the
         input trigger can only be activated using a software trigger, which is 
         generated with the `encode_action' function with argument 'trigger_now'=True. 
-        If 'always' hardware input triggers are always accepted.
+        If 'always', hardware input triggers are always accepted.
         If 'single_run', then the device accecpts hardware triggers for one complete
         run, after which it automatically reverts to `accept_hardware_trigger`='never'.        
         If 'once', then the device accecpts a single (successful) hardware trigger,
@@ -536,12 +536,13 @@ def encode_device_options(final_address=None, run_mode=None, accept_hardware_tri
         is induced by sending a command generated with the `encode_action' 
         function with argument `disable_after_current_run`=True).
     software_run_enable: bool, optional
-        If False, and a run is in progress the timer in the run is immediately
+        If False, and a run is in progress, the timer in the run is immediately
         paused, and all channels maintain their current output. The
         timer immediately resumes when `software_run_enable`=True. If False, and
         a run is not in progress, the run will be prevented from starting until
-        `software_run_enable`=True. Triggers are ignored while
-        `software_run_enable`=False.
+        `software_run_enable`=True. Hardware triggers are ignored while
+        `software_run_enable`=False. Software triggers immediately set 
+        `software_run_enable`=True.
 
     Returns
     -------
@@ -648,10 +649,12 @@ def encode_action(trigger_now=False, disable_after_current_run=False, reset_run=
     ----------
     trigger_now : bool, optional
         If True, a software trigger is sent. This will start or restart a run if
-        a run is not currently running, and `trigger_source` is set to
-        'software' or 'either'. Where a global or instruction based
-        trigger_on_powerline is set, the recieved software trigger will arm
-        the run, which will start on reciept of the next powerline_trigger.
+        a run is not currently running. A software trigger will overrule
+        `software_run_enable`=False, immeadiately settting it to True. 
+        However it will not overrule a `hardware_run_enable`=False, so software
+        triggers are ignored under that condition. Where a global or instruction 
+        based trigger_on_powerline is set, the recieved software trigger will arm
+        the run, which will start on reciept of the next powerline_trigger. 
     disable_after_current_run : bool, optional
         If True, AND the setting `run_mode`='continuous', AND a run is currently
         active, then the device will disable the run after completion of the 

@@ -329,18 +329,18 @@ def wait_monitor_development(pg):
     instructions = []
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
     instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1], notify_computer=False, stop_and_wait=False))
-    instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], notify_computer=False, stop_and_wait=False))
-    instructions.append(ndpulsegen.transcode.encode_instruction(2, 1, [1, 1, 0], notify_computer=False, stop_and_wait=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0], notify_computer=False, stop_and_wait=True))
+    instructions.append(ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0], notify_computer=False, stop_and_wait=False))
     instructions.append(ndpulsegen.transcode.encode_instruction(3, 1, [0, 0, 0], notify_computer=False, stop_and_wait=False))
     # instructions.append(ndpulsegen.transcode.encode_instruction(4, 2, [1, 0, 0], notify_computer=True, stop_and_wait=False))
     # instructions.append(ndpulsegen.transcode.encode_instruction(5, 2, [0, 0, 0], notify_computer=True, stop_and_wait=False))
     pg.write_instructions(instructions)
 
     # pg.write_device_options(final_address=len(instructions)-1, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_address=5, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     # pg.write_action(trigger_now=True)
     # pg.write_action(reset_run=True)

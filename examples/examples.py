@@ -143,6 +143,7 @@ def get_state(pg):
 
     # state = pg.get_state()
     # print(state)
+    # time.sleep(1)
     # powerline_state = pg.get_powerline_state()
     # print(powerline_state)
     [print(key,':',value) for key, value in pg.get_state().items()]
@@ -444,13 +445,13 @@ if __name__ == "__main__":
 
     # quick_test(pg)
 
-    software_trig(pg)
+    # software_trig(pg)
     # hardware_trig(pg)
     # run_mode_continuous(pg)
     # abort_run(pg) 
     # run_enable_software(pg)
     # run_enable_hardware(pg)
-    # get_state(pg)           #There is a bit of an oddity in "current_address". The state reads what is currently displayed, but the current_address reads what will be executed next
+    get_state(pg)
     # set_static_state(pg)
     # notify_when_finished(pg)
     # notify_on_specific_instructions(pg)
