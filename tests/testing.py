@@ -338,12 +338,14 @@ def wait_monitor_development(pg):
 
     # pg.write_device_options(final_address=len(instructions)-1, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
-    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='once', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     # pg.write_action(trigger_now=True)
     # pg.write_action(reset_run=True)
+    time.sleep(1)
+    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     [print(msg) for msg in pg.read_all_messages(timeout=0.1)]
     [print(key,':',value) for key, value in pg.get_state().items()]

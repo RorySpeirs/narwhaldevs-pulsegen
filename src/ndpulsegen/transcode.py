@@ -142,7 +142,7 @@ def decode_devicestate(message):
     final_address, =        struct.unpack('<Q', message[3:5] + bytes(6))
     trigger_out_delay, =    struct.unpack('<Q', message[5:12] + bytes(1))
     trigger_out_length, =   struct.unpack('<Q', message[12:13] + bytes(7))
-    current_address, =  struct.unpack('<Q', message[13:15] + bytes(6))
+    current_address, =      struct.unpack('<Q', message[13:15] + bytes(6))
     tags, =                 struct.unpack('<Q', message[15:17] + bytes(6))
 
     run_mode_tag =                  (tags >> 0) & 0b1            
@@ -896,7 +896,10 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
         if that part of the run corresponds to a measurement that is very
         sensitive to magnetic field. The `powerline_trigger` respects the global
         setting `powerline_trigger_delay`. The global setting
-        `trigger_on_powerline` is ignored. 
+        `trigger_on_powerline` is irrelevant to the functioning of a powerline_sync
+        instruction. Hardware triggers are ignored when waiting for a powerline_sync 
+        instruction. Software triggers are respected, and will immeadiately 
+        restart a run.
 
     Returns
     -------

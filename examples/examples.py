@@ -293,6 +293,37 @@ def using_loops_advanced(pg):
     print(pg.read_all_messages(timeout=0.1))
 
 
+# def powerline_test_global_setting(pg):
+#     '''Note that the device only syncs with the AC line when a trigger is sent. So if this wun was set to continuous, subsequent loops would not re-sync with the AC line.'''
+#     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+#     instr0 =  ndpulsegen.encode_instruction(0, 100000, [1, 1, 1])
+#     instr1 =  ndpulsegen.encode_instruction(1, 100000, [0, 1, 0])
+#     instr2 =  ndpulsegen.encode_instruction(2, 200000, [1, 1, 0])
+#     instr3 =  ndpulsegen.encode_instruction(3, 300000, [0, 0, 0])
+#     instr4 =  ndpulsegen.encode_instruction(4, 1, [0, 0, 0])
+#     instructions = [instr0, instr1, instr3, instr2, instr4]
+#     pg.write_instructions(instructions)
+
+#     pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+#     pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=0)
+#     # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+
+#     pg.write_action(trigger_now=True)
+#     time.sleep(2)
+
+#     '''You can also choose at what point in the AC line cycle you want the device to restart'''
+#     desired_trigger_phase = 90 #desired phase in degrees
+#     powerline_state = pg.get_powerline_state()
+#     trigger_delay = desired_trigger_phase/360*powerline_state['powerline_period']
+
+#     pg.write_powerline_trigger_options(powerline_trigger_delay=int(trigger_delay))
+#     pg.write_action(trigger_now=True)
+
+#     # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+
+#     pg.write_powerline_trigger_options(trigger_on_powerline=False) #Remember, this is a device setting, so it persists until you change it
+
 def powerline_test_global_setting(pg):
     '''Note that the device only syncs with the AC line when a trigger is sent. So if this wun was set to continuous, subsequent loops would not re-sync with the AC line.'''
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
@@ -307,12 +338,12 @@ def powerline_test_global_setting(pg):
     pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=255, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
 
     pg.write_powerline_trigger_options(trigger_on_powerline=True, powerline_trigger_delay=0)
-    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+    [print(key,':',value) for key, value in pg.get_powerline_state().items()]
 
     pg.write_action(trigger_now=True)
-    time.sleep(2)
+    time.sleep(1)
 
-    '''You can also choose at what point in the AC line cycle you want the device to restart'''
+    # '''You can also choose at what point in the AC line cycle you want the device to restart'''
     desired_trigger_phase = 90 #desired phase in degrees
     powerline_state = pg.get_powerline_state()
     trigger_delay = desired_trigger_phase/360*powerline_state['powerline_period']
@@ -320,7 +351,7 @@ def powerline_test_global_setting(pg):
     pg.write_powerline_trigger_options(powerline_trigger_delay=int(trigger_delay))
     pg.write_action(trigger_now=True)
 
-    # [print(key,':',value) for key, value in pg.get_powerline_state().items()]
+    [print(key,':',value) for key, value in pg.get_powerline_state().items()]
 
     pg.write_powerline_trigger_options(trigger_on_powerline=False) #Remember, this is a device setting, so it persists until you change it
 
@@ -451,7 +482,7 @@ if __name__ == "__main__":
     # abort_run(pg) 
     # run_enable_software(pg)
     # run_enable_hardware(pg)
-    get_state(pg)
+    # get_state(pg)
     # set_static_state(pg)
     # notify_when_finished(pg)
     # notify_on_specific_instructions(pg)
@@ -460,7 +491,7 @@ if __name__ == "__main__":
     # stop_and_wait_on_specific_instructions(pg)
     # using_loops_normally(pg)
     # using_loops_advanced(pg)
-    # powerline_test_global_setting(pg)
+    powerline_test_global_setting(pg)
     # powerline_sync_instruction_single_run(pg)
     # powerline_sync_instruction_continuous_run(pg)
     # put_into_and_recover_from_erroneous_state(pg)  
