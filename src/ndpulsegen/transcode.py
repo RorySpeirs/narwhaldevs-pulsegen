@@ -897,9 +897,8 @@ def encode_instruction(address, duration, state, goto_address=0, goto_counter=0,
         sensitive to magnetic field. The `powerline_trigger` respects the global
         setting `powerline_trigger_delay`. The global setting
         `trigger_on_powerline` is irrelevant to the functioning of a powerline_sync
-        instruction. Hardware triggers are ignored when waiting for a powerline_sync 
-        instruction. Software triggers are respected, and will immeadiately 
-        restart a run.
+        instruction. Hardware and Software triggers are ignored when waiting for a 
+        powerline_sync instruction.
 
     Returns
     -------

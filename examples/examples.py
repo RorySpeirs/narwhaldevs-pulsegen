@@ -353,7 +353,7 @@ def powerline_test_global_setting(pg):
 
     [print(key,':',value) for key, value in pg.get_powerline_state().items()]
 
-    pg.write_powerline_trigger_options(trigger_on_powerline=False) #Remember, this is a device setting, so it persists until you change it
+    pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0) #Remember, this is a device setting, so it persists until you change it
 
 
 def powerline_sync_instruction_single_run(pg):

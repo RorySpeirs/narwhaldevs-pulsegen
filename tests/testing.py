@@ -351,6 +351,73 @@ def wait_monitor_development(pg):
     [print(key,':',value) for key, value in pg.get_state().items()]
     [print(key,':',value) for key, value in pg.get_state_extras().items()]
 
+def powerline_check(pg):
+    instructions = []
+    # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
+    # instructions.append(ndpulsegen.transcode.encode_instruction(0, int(1E6), [1], notify_computer=False, stop_and_wait=False))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, int(2E5), [0], notify_computer=False, stop_and_wait=True))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(2, 5, [0], notify_computer=False, stop_and_wait=False, powerline_sync=True))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(3, int(3E6), [1], notify_computer=False, stop_and_wait=False))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(4, 10, [0], notify_computer=False, stop_and_wait=False))
+    # pg.write_instructions(instructions)
+
+    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+
+    # pg.write_action(trigger_now=True)
+    # pg.write_action(reset_run=True)
+
+    # bugger. So check if this is happening:
+    # If a stop and wait instruction is active, where the next instruction is a powerline sync instruction, the "powerline" can become triggered while the stop and wait is active!
+    # which means the powerline sync instruction happens straight away.
+    # NOPE
+    # instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [0], stop_and_wait=True, powerline_sync=False))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(1, int(10E-3/10E-9), [1], stop_and_wait=False, powerline_sync=True))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(2, int(1E-3/10E-9), [0], stop_and_wait=True, powerline_sync=False))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(3, int(10E-3/10E-9), [1], stop_and_wait=False, powerline_sync=True))
+    # instructions.append(ndpulsegen.transcode.encode_instruction(4, int(105E-3/10E-9), [0], stop_and_wait=False, powerline_sync=False))
+    # pg.write_instructions(instructions)
+
+    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_action(trigger_now=True)
+
+
+    instructions.append(ndpulsegen.transcode.encode_instruction(0, 1, [0], stop_and_wait=False, powerline_sync=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(1, int(10E-3/10E-9), [1], stop_and_wait=False, powerline_sync=False))
+    instructions.append(ndpulsegen.transcode.encode_instruction(2, int(1.0E-3/10E-9), [0], stop_and_wait=True, powerline_sync=False, notify_computer=True))
+    instructions.append(ndpulsegen.transcode.encode_instruction(3, int(10E-3/10E-9), [1], stop_and_wait=False, powerline_sync=True, notify_computer=True))
+    instructions.append(ndpulsegen.transcode.encode_instruction(4, int(0.1E-3/10E-9), [0], stop_and_wait=False, powerline_sync=False))
+    pg.write_instructions(instructions)
+    pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
+    # pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='single_run', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_action(trigger_now=True)
+    fails = 0
+    loops = 0
+    N = 100
+    for a in range(N):
+        loops += 1
+        pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+        time.sleep(np.random.random(1)[0]*100E-3)
+        pg.write_action(trigger_now=True)
+        # time.sleep(0.012)
+        # pg.write_action(trigger_now=True)
+
+        a2 = pg.return_on_notification(address=2, timeout=1)
+        a3 = pg.return_on_notification(address=3, timeout=1)
+        a2t = a2['run_time']
+        a3t = a3['run_time']
+
+        if (a3t - a2t) < (int(1E-3/10E-9) + 11): # +2 seems to be the limit, but the chances don't increase in proportion to this extra time.
+            fails += 1                             # nope, it also fails sometimes at +1, just much more rarely. -> ~1% instaead of ~7-10%
+            # break
+        print(loops, fails)
+        pg.return_on_notification(finished=True, timeout=1)
+
+# OK, probably need to go and actually think about the FPGA code. damnit.
+
+    print(f'{fails/loops*100}%')
+
+    # happens both with 'once' and 'single_run'. But it is much more common with single_run hardware triggers.
+
 if __name__ == "__main__":
 
     pg = ndpulsegen.PulseGenerator()
@@ -369,9 +436,9 @@ if __name__ == "__main__":
     # test_notifications(pg)
     # pcb_connection_check(pg)
     # current_address_problem(pg)
-    wait_monitor_development(pg)
+    # wait_monitor_development(pg)
     # hardware_trig_acceptance(pg)
-
+    powerline_check(pg)
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
     # print_bytes(instruction)
