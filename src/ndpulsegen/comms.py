@@ -14,6 +14,7 @@ class PulseGenerator():
         self.ser.timeout = 0.1        #block read for 100ms
         self.ser.writeTimeout = 1     #timeout for write
         self.ser.baudrate = 12000000
+        # self.ser.exclusive = True
 
         # For every message type that can recieved by the monitor thread, make a queue that the main thread will interact with
         self.msgin_queues = {decodeinfo['message_type']:queue.Queue() for decodeinfo in transcode.msgin_decodeinfo.values()}

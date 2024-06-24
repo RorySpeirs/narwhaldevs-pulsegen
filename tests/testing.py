@@ -178,17 +178,18 @@ Bottom line: it seems like it should be easy to sync up the output state, with t
 
 def quick_check(pg):
     # address, duration, state, goto_address=0, goto_counter=0, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False
-    instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
-    instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
-    instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
-    instr3 = ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0])
+    # instr0 = ndpulsegen.transcode.encode_instruction(0, 1, [1, 1, 1])
+    # instr1 = ndpulsegen.transcode.encode_instruction(1, 1, [0, 1, 0])
+    # instr2 = ndpulsegen.transcode.encode_instruction(2, 2, [1, 1, 0])
+    # instr3 = ndpulsegen.transcode.encode_instruction(3, 2, [0, 0, 0])
 
-    instructions = [instr0, instr1, instr2, instr3]
-    pg.write_instructions(instructions)
+    # instructions = [instr0, instr1, instr2, instr3]
+    # pg.write_instructions(instructions)
 
-    pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
+    # pg.write_device_options(final_address=3, run_mode='single', accept_hardware_trigger='always', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=False, software_run_enable=True)
     
-
+    pg.write_echo(b'y')
+    [print(msg) for msg in pg.read_all_messages(timeout=0.1)]
     # '''Testing the get state notification'''
     # pg.write_action(trigger_now=True)
     # [print(key,':',value) for key, value in pg.get_state().items() if key in ['current_address', 'state']]
@@ -418,13 +419,36 @@ def powerline_check(pg):
 
     # happens both with 'once' and 'single_run'. But it is much more common with single_run hardware triggers.
 
+def software_retrigger_check(pg):
+    # pg.write_action(reset_run=True)
+    instructions = []
+    instructions.append(ndpulsegen.encode_instruction(0, 1, [0], stop_and_wait=False, powerline_sync=False))
+    instructions.append(ndpulsegen.encode_instruction(1, int(10E-3/10E-9), [1], stop_and_wait=False, powerline_sync=False))
+    instructions.append(ndpulsegen.encode_instruction(2, int(1.0E-3/10E-9), [0], stop_and_wait=True, powerline_sync=False, notify_computer=True))
+    instructions.append(ndpulsegen.encode_instruction(3, int(10E-3/10E-9), [1], stop_and_wait=False, powerline_sync=True, notify_computer=True))
+    instructions.append(ndpulsegen.encode_instruction(4, int(0.1E-3/10E-9), [0], stop_and_wait=False, powerline_sync=False))
+    pg.write_instructions(instructions)
+
+    pg.write_powerline_trigger_options(trigger_on_powerline=False, powerline_trigger_delay=0)
+    pg.write_device_options(final_address=4, run_mode='single', accept_hardware_trigger='never', trigger_out_length=1, trigger_out_delay=0, notify_on_main_trig_out=False, notify_when_run_finished=True, software_run_enable=True)
+
+    pg.write_action(trigger_now=True)
+    time.sleep(0.1)
+    pg.write_action(trigger_now=True)
+    [print(msg) for msg in pg.read_all_messages(timeout=0.1)]
+
+
 if __name__ == "__main__":
 
     pg = ndpulsegen.PulseGenerator()
     # print(pg.get_connected_devices())
-    pg.connect()
+    pg.connect(serial_number=12582915)
+    pg2 = ndpulsegen.PulseGenerator()
+    # print(pg.get_connected_devices())
+    pg2.connect(serial_number=12582917)
 
-    # quick_check(pg)
+    quick_check(pg2) 
+    quick_check(pg)
     # quick_count(pg)
     # specific_count(pg)
 
@@ -438,7 +462,8 @@ if __name__ == "__main__":
     # current_address_problem(pg)
     # wait_monitor_development(pg)
     # hardware_trig_acceptance(pg)
-    powerline_check(pg)
+    # powerline_check(pg)
+    # software_retrigger_check(pg)
 
     # instruction = ndpulsegen.transcode.encode_instruction(address=1234, duration=5678, state=[0, 1, 0, 1], goto_address=69, goto_counter=13, stop_and_wait=False, hardware_trig_out=False, notify_computer=False, powerline_sync=False)
     # print_bytes(instruction)
